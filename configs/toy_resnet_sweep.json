@@ -1,0 +1,22 @@
+{ 
+
+  "resnet.pretrained": [
+    true,
+    false
+  ],
+
+  "main.use_data_augmentation": [
+    true,
+    false
+  ],
+  "main.batch_size": [
+    512
+  ],
+  "trainer.max_epochs": [
+    100
+  ],
+  "main.model_name": [
+    "resnet"
+  ] 
+
+}

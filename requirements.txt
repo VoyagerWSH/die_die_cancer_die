@@ -1,0 +1,11 @@
+torch
+torchvision
+torchio
+medmnist
+wandb
+opencv-python
+albumentations
+pydicom
+tqdm
+lightning[pytorch-extra]
+lifelines
