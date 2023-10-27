@@ -7,13 +7,15 @@ import torchvision
 from src.cindex import concordance_index
 
 class Classifer(pl.LightningModule):
-    def __init__(self, num_classes=9, init_lr=1e-4):
+    def __init__(self, num_classes=9, init_lr=1e-4, optimizer="Adam", loss="Cross Entropy"):
         super().__init__()
         self.init_lr = init_lr
         self.num_classes = num_classes
+        self.optimizer = optimizer
 
         # Define loss fn for classifier
-        self.loss = None
+        if loss == "Cross Entropy":
+            self.loss = nn.CrossEntropyLoss()
 
         self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes)
         self.auc = torchmetrics.AUROC(task="binary" if self.num_classes == 2 else "multiclass", num_classes=self.num_classes)
@@ -34,10 +36,8 @@ class Classifer(pl.LightningModule):
         x, y = self.get_xy(batch)
 
         ## TODO: get predictions from your model and store them as y_hat
-        y_hat = None
-        raise NotImplementedError("Not implemented yet")
-
-        loss = None
+        y_hat = self.forward(x)
+        loss = self.loss(y, y_hat)
 
         self.log('train_acc', self.accuracy(y_hat, y), prog_bar=True)
         self.log('train_loss', loss, prog_bar=True)
@@ -109,26 +109,40 @@ class Classifer(pl.LightningModule):
 
     def configure_optimizers(self):
         ## TODO: Define your optimizer and learning rate scheduler here (hint: Adam is a good default)
-        raise NotImplementedError("Not implemented yet")
+        if self.optimizer == "Adam":
+            return torch.optim.Adam(self.parameters(), lr=self.init_lr)
+        if self.optimizer == "AdamW":
+            return torch.optim.AdamW(self.parameters(), lr=self.init_lr)
+
 
 
 
 class MLP(Classifer):
-    def __init__(self, input_dim=28*28*3, hidden_dim=128, num_layers=1, num_classes=9, use_bn=False, init_lr = 1e-3, **kwargs):
-        super().__init__(num_classes=num_classes, init_lr=init_lr)
+    def __init__(self, layers, use_bn=False, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
+        super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer)
         self.save_hyperparameters()
-
-        self.hidden_dim = hidden_dim
+        
+        assert(len(layers) >= 2)
+        self.hidden_layers = nn.ModuleList()
         self.use_bn = use_bn
 
+        for input_size, output_size in zip(layers, layers[1:-1]):
+            self.hidden_layers.append(nn.Linear(input_size, output_size))
+            self.hidden_layers.append(nn.relu(output_size))
+            if use_bn:
+                self.hidden_layers.append(nn.BatchNorm1d(output_size))
 
-        raise NotImplementedError("Not implemented yet")
-
+        self.hidden_layers.append(self.hidden.append(nn.Linear(layers[-2], layers[-1])))
 
     def forward(self, x):
         batch_size, channels, width, height = x.size()
-        raise NotImplementedError("Not implemented yet")
-        return None
+        x = x.view(batch_size, channels*width*height)
+
+        for layer in self.hidden_layers:
+            x = layer(x)
+
+        return x
+
 
 
 NLST_CENSORING_DIST = {
