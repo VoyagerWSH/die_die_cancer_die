@@ -36,7 +36,7 @@ class Classifer(pl.LightningModule):
         x, y = self.get_xy(batch)
 
         y_hat = self.forward(x)
-        loss = self.loss(y, y_hat)
+        loss = self.loss(y_hat, y)
 
         self.log('train_acc', self.accuracy(y_hat, y), prog_bar=True)
         self.log('train_loss', loss, prog_bar=True)
@@ -52,7 +52,7 @@ class Classifer(pl.LightningModule):
         x, y = self.get_xy(batch)
 
         y_hat = self.forward(x)
-        loss = self.loss(y, y_hat)
+        loss = self.loss(y_hat, y)
 
         self.log('val_loss', loss, sync_dist=True, prog_bar=True)
         self.log("val_acc", self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
@@ -67,7 +67,7 @@ class Classifer(pl.LightningModule):
         x, y = self.get_xy(batch)
         
         y_hat = self.forward(x)
-        loss = self.loss(y, y_hat)
+        loss = self.loss(y_hat, y)
 
         self.log('test_loss', loss, sync_dist=True, prog_bar=True)
         self.log('test_acc', self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
