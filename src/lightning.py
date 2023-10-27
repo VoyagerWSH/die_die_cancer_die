@@ -35,7 +35,6 @@ class Classifer(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
 
-        ## TODO: get predictions from your model and store them as y_hat
         y_hat = self.forward(x)
         loss = self.loss(y, y_hat)
 
@@ -52,7 +51,8 @@ class Classifer(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
 
-        raise NotImplementedError("Not implemented yet")
+        y_hat = self.forward(x)
+        loss = self.loss(y, y_hat)
 
         self.log('val_loss', loss, sync_dist=True, prog_bar=True)
         self.log("val_acc", self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
@@ -65,7 +65,9 @@ class Classifer(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
-        raise NotImplementedError("Not implemented yet")
+        
+        y_hat = self.forward(x)
+        loss = self.loss(y, y_hat)
 
         self.log('test_loss', loss, sync_dist=True, prog_bar=True)
         self.log('test_acc', self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
@@ -108,7 +110,6 @@ class Classifer(pl.LightningModule):
         self.test_outputs = []
 
     def configure_optimizers(self):
-        ## TODO: Define your optimizer and learning rate scheduler here (hint: Adam is a good default)
         if self.optimizer == "Adam":
             return torch.optim.Adam(self.parameters(), lr=self.init_lr)
         if self.optimizer == "AdamW":
@@ -119,7 +120,7 @@ class Classifer(pl.LightningModule):
 
 class MLP(Classifer):
     def __init__(self, layers, use_bn=False, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
-        super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer)
+        super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
         
         assert(len(layers) >= 2)
@@ -128,11 +129,11 @@ class MLP(Classifer):
 
         for input_size, output_size in zip(layers, layers[1:-1]):
             self.hidden_layers.append(nn.Linear(input_size, output_size))
-            self.hidden_layers.append(nn.relu(output_size))
+            self.hidden_layers.append(nn.ReLU(output_size))
             if use_bn:
                 self.hidden_layers.append(nn.BatchNorm1d(output_size))
 
-        self.hidden_layers.append(self.hidden.append(nn.Linear(layers[-2], layers[-1])))
+        self.hidden_layers.append(nn.Linear(layers[-2], layers[-1]))
 
     def forward(self, x):
         batch_size, channels, width, height = x.size()

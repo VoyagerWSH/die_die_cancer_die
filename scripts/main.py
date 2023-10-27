@@ -1,4 +1,3 @@
-
 import argparse
 import sys
 from os.path import dirname, realpath
@@ -36,7 +35,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--project_name",
-        default="cornerstone",
+        default="CPH 200A Project 2",
         help="Name of project for wandb"
     )
 
@@ -54,7 +53,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--train",
-        default=False,
+        default=True,
         action="store_true",
         help="Whether to train the model."
     )
@@ -87,6 +86,7 @@ def main(args: argparse.Namespace):
 
     print("Initializing model")
     ## TODO: Implement your deep learning methods
+    args[args.model_name]['layers'] = [28*28*3, 1024, 1024, 512, 256, 128, 9]
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
     else:
