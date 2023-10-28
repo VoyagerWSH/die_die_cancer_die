@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torchmetrics
 import torchvision
 from src.cindex import concordance_index
+from math import floor
 
 class Classifer(pl.LightningModule):
     def __init__(self, num_classes=9, init_lr=1e-4, optimizer="Adam", loss="Cross Entropy"):
@@ -119,7 +120,7 @@ class Classifer(pl.LightningModule):
 
 
 class MLP(Classifer):
-    def __init__(self, layers, use_bn=False, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
+    def __init__(self, layers=[28*28*3, 1024, 1024, 512, 256, 128, 9], use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
         super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
         
@@ -138,6 +139,57 @@ class MLP(Classifer):
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         x = x.view(batch_size, channels*width*height)
+
+        for layer in self.hidden_layers:
+            x = layer(x)
+
+        return x
+
+"""
+Utility function for computing output of convolutions
+takes a tuple of (h,w) and returns a tuple of (h,w)
+"""
+def conv_output_shape(dim, kernel_size=1, stride=1, padding=0, dilation=1):
+    if type(kernel_size) is not tuple:
+        kernel_size = (kernel_size, kernel_size)
+    dim = floor( ((dim + (2 * padding) - ( dilation * (kernel_size[0] - 1) ) - 1 )/ stride) + 1)
+    return dim
+
+class CNN(Classifer):
+    def __init__(self, conv_layers=[], in_dim = 28, num_class = 9, pooling=None, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
+        super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer, loss=loss)
+        self.save_hyperparameters()
+        
+        self.conv_layers = nn.ModuleList()
+        self.use_bn = use_bn
+        self.dim = in_dim
+        self.num_class = num_class
+        
+        for i in range(len(conv_layers)-2):
+            self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[i], out_channels=conv_layers[i+1], kernel_size=3, stride=1, padding=0, padding_mode='replicate'))
+            self.dim = conv_output_shape(self.dim, kernel_size=3, stride=1, padding=0)
+            
+            if use_bn:
+                self.conv_layers.append(nn.BatchNorm2d(conv_layers[i+1], eps=1e-5, momentum=0.1))
+            
+            self.conv_layers.append(nn.ReLU())
+
+            if pooling == "max":
+                self.conv_layers.append(nn.MaxPool2d(3, stride=2))
+                self.dim = conv_output_shape(self.dim, kernel_size=3, stride=2)
+            if pooling == "avg":
+                self.conv_layers.append(nn.AvgPool2d(3, stride=2))
+                self.dim = conv_output_shape(self.dim, kernel_size=3, stride=2)
+        
+        self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[-2], out_channels=conv_layers[-1], kernel_size=3, stride=1, padding=0, padding_mode='replicate'))
+        self.dim = conv_output_shape(self.dim, kernel_size=3, stride=1, padding=0)
+        
+        self.conv_layers.append(nn.MaxPool2d(self.dim))
+        self.conv_layers.append(nn.Linear(conv_layers[-1], self.num_class))
+    
+    def forward(self, x):
+        batch_size, channels, width, height = x.size()
+        # x = x.view(batch_size, channels*width*height)
 
         for layer in self.hidden_layers:
             x = layer(x)
