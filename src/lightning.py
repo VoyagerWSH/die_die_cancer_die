@@ -157,7 +157,7 @@ def conv_output_shape(dim, kernel_size=1, stride=1, padding=0, dilation=1):
 
 class CNN(Classifer):
     def __init__(self, conv_layers=[], in_dim = 28, num_class = 9, pooling=None, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
-        super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer, loss=loss)
+        super().__init__(num_classes=num_class, init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
         
         self.conv_layers = nn.ModuleList()
