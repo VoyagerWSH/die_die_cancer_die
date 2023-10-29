@@ -3,13 +3,14 @@ import sys
 from os.path import dirname, realpath
 
 sys.path.append(dirname(dirname(realpath(__file__))))
-from src.lightning import MLP, RiskModel
+from src.lightning import MLP, CNN, RiskModel
 from src.dataset import PathMnist, NLST
 from lightning.pytorch.cli import LightningArgumentParser
 import lightning.pytorch as pl
 
 NAME_TO_MODEL_CLASS = {
     "mlp": MLP,
+    "cnn": CNN,
     "risk_model": RiskModel
 }
 
@@ -86,14 +87,19 @@ def main(args: argparse.Namespace):
 
     print("Initializing model")
     ## TODO: Implement your deep learning methods
-    args[args.model_name]['layers'] = [28*28*3, 1024, 1024, 512, 256, 128, 9]
+    if args.model_name == "mlp":
+        args[args.model_name]['layers'] = [28*28*3, 1024, 1024, 512, 256, 128, 9]
+    elif args.model_name == "cnn":
+        args[args.model_name]['conv_layers'] = [3, 6, 12, 24]
+        args[args.model_name]['pooling'] = "max"
+        
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
     else:
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    logger = pl.loggers.WandbLogger(project=args.project_name)
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity: "cancer-busters")
 
     args.trainer.accelerator = 'auto'
     args.trainer.logger = logger
