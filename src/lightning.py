@@ -191,7 +191,7 @@ class CNN(Classifer):
         batch_size, channels, width, height = x.size()
         # x = x.view(batch_size, channels*width*height)
 
-        for layer in self.hidden_layers:
+        for layer in self.conv_layers:
             x = layer(x)
 
         return x
