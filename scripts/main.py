@@ -24,7 +24,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--model_name",
-        default="mlp",
+        default="cnn",
         help="Name of model to use. Options include: mlp, cnn, resnet",
     )
 
@@ -99,7 +99,7 @@ def main(args: argparse.Namespace):
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    logger = pl.loggers.WandbLogger(project=args.project_name, entity: "cancer-busters")
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters")
 
     args.trainer.accelerator = 'auto'
     args.trainer.logger = logger
