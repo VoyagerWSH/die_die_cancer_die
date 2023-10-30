@@ -100,6 +100,7 @@ def main(args: argparse.Namespace):
 
     print("Initializing trainer")
     logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters")
+    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", mode="disabled")
 
     args.trainer.accelerator = 'auto'
     args.trainer.logger = logger

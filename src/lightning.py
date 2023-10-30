@@ -191,10 +191,11 @@ class CNN(Classifer):
         batch_size, channels, width, height = x.size()
         # x = x.view(batch_size, channels*width*height)
 
-        for layer in self.conv_layers:
+        for layer in self.conv_layers[:-1]:
             x = layer(x)
+        x = torch.squeeze(x, (-1, -2))
 
-        return x
+        return self.conv_layers[-1](x)
 
 
 
