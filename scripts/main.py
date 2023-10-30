@@ -3,7 +3,7 @@ import sys
 from os.path import dirname, realpath
 
 sys.path.append(dirname(dirname(realpath(__file__))))
-from src.lightning import MLP, CNN, RiskModel
+from src.lightning import MLP, CNN, Resnet_pretain, RiskModel
 from src.dataset import PathMnist, NLST
 from lightning.pytorch.cli import LightningArgumentParser
 import lightning.pytorch as pl
@@ -11,6 +11,7 @@ import lightning.pytorch as pl
 NAME_TO_MODEL_CLASS = {
     "mlp": MLP,
     "cnn": CNN,
+    "resnet_pretrian": Resnet_pretain,
     "risk_model": RiskModel
 }
 
@@ -24,7 +25,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--model_name",
-        default="cnn",
+        default="resnet_pretrian",
         help="Name of model to use. Options include: mlp, cnn, resnet",
     )
 
