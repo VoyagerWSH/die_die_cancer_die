@@ -92,6 +92,8 @@ def main(args: argparse.Namespace):
     elif args.model_name == "cnn":
         args[args.model_name]['conv_layers'] = [3, 6, 12, 24]
         args[args.model_name]['pooling'] = "max"
+        # args[args.model_name]['optimizer'] = "AdamW"
+        args[args.model_name]['init_lr'] = 1e-5
         
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
