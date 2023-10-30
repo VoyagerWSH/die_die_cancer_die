@@ -181,7 +181,7 @@ class CNN(Classifer):
                 self.conv_layers.append(nn.AvgPool2d(3, stride=2))
                 self.dim = conv_output_shape(self.dim, kernel_size=3, stride=2)
         
-        self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[-2], out_channels=conv_layers[-1], kernel_size=3, stride=1, padding=0, padding_mode='replicate'))
+        self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[-2], out_channels=conv_layers[-1], kernel_size=3, stride=1, padding=0, padding_mode='zeros'))
         self.dim = conv_output_shape(self.dim, kernel_size=3, stride=1, padding=0)
         
         self.conv_layers.append(nn.MaxPool2d(self.dim))
