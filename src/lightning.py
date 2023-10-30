@@ -7,6 +7,8 @@ import torchvision
 from src.cindex import concordance_index
 from math import floor
 
+from torchvision.models import resnet18, ResNet18_Weights
+
 class Classifer(pl.LightningModule):
     def __init__(self, num_classes=9, init_lr=1e-4, optimizer="Adam", loss="Cross Entropy"):
         super().__init__()
@@ -193,9 +195,37 @@ class CNN(Classifer):
 
         for layer in self.conv_layers[:-1]:
             x = layer(x)
-        x = torch.squeeze(x, (-1, -2))
 
-        return self.conv_layers[-1](x)
+        return self.conv_layers[-1](x.flatten(1))
+
+class Resnet_pretain(Classifer):
+    def __init__(self, num_class = 9, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
+        super().__init__(num_classes=num_class, init_lr=init_lr, optimizer=optimizer, loss=loss)
+        self.save_hyperparameters()
+
+        self.use_bn = use_bn
+        self.num_class = num_class
+        self.fc_layers = nn.ModuleList()
+
+        backbone = resnet18(weights="DEFAULT")
+        num_filters = backbone.fc.in_features
+        layers = list(backbone.children())[:-1]
+        self.feature_extractor = nn.Sequential(*layers)
+
+        self.fc_layers.append(nn.ReLu(nn.Linear(num_filters, 256)))
+        if self.use_bn:
+            self.fc_layers.append(nn.BatchNorm1d(256))
+        self.fc_layers.append(nn.Linear(256, self.num_class))
+
+    def forward(self, x):
+        self.feature_extractor.eval()
+        with torch.no_grad():
+            x = self.feature_extractor(x).flatten(1)
+        
+        for layer in self.fc_layers:
+            x = layer(x)
+
+        return x
 
 
 

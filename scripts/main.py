@@ -89,11 +89,13 @@ def main(args: argparse.Namespace):
     ## TODO: Implement your deep learning methods
     if args.model_name == "mlp":
         args[args.model_name]['layers'] = [28*28*3, 1024, 1024, 512, 256, 128, 9]
+        exp_name = "MLP_layers=" + str(len(args[args.model_name]['layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "cnn":
         args[args.model_name]['conv_layers'] = [3, 6, 12, 24]
         args[args.model_name]['pooling'] = "max"
         # args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['init_lr'] = 1e-5
+        exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
         
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
@@ -101,8 +103,8 @@ def main(args: argparse.Namespace):
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters")
-    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", mode="disabled")
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
+    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
     args.trainer.accelerator = 'auto'
     args.trainer.logger = logger
