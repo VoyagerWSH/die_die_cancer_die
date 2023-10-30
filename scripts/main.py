@@ -3,7 +3,7 @@ import sys
 from os.path import dirname, realpath
 
 sys.path.append(dirname(dirname(realpath(__file__))))
-from src.lightning import MLP, CNN, Resnet_pretain, RiskModel
+from src.lightning import MLP, CNN, Resnet, RiskModel
 from src.dataset import PathMnist, NLST
 from lightning.pytorch.cli import LightningArgumentParser
 import lightning.pytorch as pl
@@ -11,7 +11,7 @@ import lightning.pytorch as pl
 NAME_TO_MODEL_CLASS = {
     "mlp": MLP,
     "cnn": CNN,
-    "resnet_pretrian": Resnet_pretain,
+    "resnet": Resnet,
     "risk_model": RiskModel
 }
 
@@ -25,7 +25,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--model_name",
-        default="resnet_pretrian",
+        default="resnet",
         help="Name of model to use. Options include: mlp, cnn, resnet",
     )
 
@@ -97,9 +97,10 @@ def main(args: argparse.Namespace):
         # args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['init_lr'] = 1e-5
         exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
-    elif args.model_name == "resnet_pretrian":
-        args[args.model_name]['init_lr'] = 1e-5
-        exp_name = "Resnet_pretrain_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
+    elif args.model_name == "resnet":
+        args[args.model_name]['init_lr'] = 5e-5
+        args[args.model_name]['pre_train'] = False
+        exp_name = "Resnet_pretrain=" + str(args[args.model_name]['pre_train']) + "_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
 
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
