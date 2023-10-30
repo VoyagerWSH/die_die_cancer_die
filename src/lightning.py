@@ -166,7 +166,7 @@ class CNN(Classifer):
         self.num_class = num_class
         
         for i in range(len(conv_layers)-2):
-            self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[i], out_channels=conv_layers[i+1], kernel_size=3, stride=1, padding=0, padding_mode='replicate'))
+            self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[i], out_channels=conv_layers[i+1], kernel_size=3, stride=1, padding=0, padding_mode='zeros'))
             self.dim = conv_output_shape(self.dim, kernel_size=3, stride=1, padding=0)
             
             if use_bn:
