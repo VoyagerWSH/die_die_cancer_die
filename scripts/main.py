@@ -97,7 +97,10 @@ def main(args: argparse.Namespace):
         # args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['init_lr'] = 1e-5
         exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
-        
+    elif args.model_name == "resnet_pretrian":
+        args[args.model_name]['init_lr'] = 1e-5
+        exp_name = "Resnet_pretrain_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
+
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
     else:
