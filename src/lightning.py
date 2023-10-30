@@ -212,7 +212,8 @@ class Resnet_pretain(Classifer):
         layers = list(backbone.children())[:-1]
         self.feature_extractor = nn.Sequential(*layers)
 
-        self.fc_layers.append(nn.ReLU(nn.Linear(num_filters, 256)))
+        self.fc_layers.append(nn.Linear(num_filters, 256))
+        self.fc_layers.append(nn.ReLU())
         if self.use_bn:
             self.fc_layers.append(nn.BatchNorm1d(256))
         self.fc_layers.append(nn.Linear(256, self.num_class))
