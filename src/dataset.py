@@ -16,7 +16,7 @@ class PathMnist(pl.LightningDataModule):
         Pytorch Lightning DataModule for PathMnist dataset. This will download the dataset, prepare data loaders and apply
         data augmentation.
     """
-    def __init__(self, use_data_augmentation=False, batch_size=64, num_workers=8, **kwargs):
+    def __init__(self, use_data_augmentation=False, batch_size=1024, num_workers=8, **kwargs):
         super().__init__()
         self.save_hyperparameters()
 
