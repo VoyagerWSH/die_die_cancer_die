@@ -211,27 +211,27 @@ class Resnet(Classifer):
             backbone = resnet18(weights="DEFAULT")
         else:
             backbone = resnet18(weights=None)
-        layers = list(backbone.children())
-        num_channels = backbone.fc.out_features
+        num_channels = backbone.fc.in_features
+        layers = list(backbone.children())[:-1]
         self.feature_extractor = nn.Sequential(*layers)
 
-        self.fc_layers.append(nn.ReLU())
-        self.fc_layers.append(nn.Linear(num_channels, 512))
-        self.fc_layers.append(nn.ReLU())
-        if self.use_bn:
-            self.fc_layers.append(nn.BatchNorm1d(512))
-
-        self.fc_layers.append(nn.Linear(512, 256))
+        self.fc_layers.append(nn.Linear(num_channels, 256))
         self.fc_layers.append(nn.ReLU())
         if self.use_bn:
             self.fc_layers.append(nn.BatchNorm1d(256))
 
-        self.fc_layers.append(nn.Linear(256, 64))
+        self.fc_layers.append(nn.Linear(256, 128))
+        self.fc_layers.append(nn.ReLU())
+        if self.use_bn:
+            self.fc_layers.append(nn.BatchNorm1d(128))
+
+        self.fc_layers.append(nn.Linear(128, 64))
         self.fc_layers.append(nn.ReLU())
         if self.use_bn:
             self.fc_layers.append(nn.BatchNorm1d(64))
-        
+
         self.fc_layers.append(nn.Linear(64, self.num_class))
+
 
     def forward(self, x):
         # if self.pre_train:
