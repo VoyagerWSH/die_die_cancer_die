@@ -224,13 +224,14 @@ class Resnet(Classifer):
         self.fc_layers.append(nn.Linear(num_channels, self.num_class))
 
     def forward(self, x):
-        if self.pre_train:
-            self.feature_extractor.eval()
-            with torch.no_grad():
-                x = self.feature_extractor(x).flatten(1)
-        else:
-            x = self.feature_extractor(x).flatten(1)
+        # if self.pre_train:
+        #     self.feature_extractor.eval()
+        #     with torch.no_grad():
+        #         x = self.feature_extractor(x).flatten(1)
+        # else:
+        #     x = self.feature_extractor(x).flatten(1)
         
+        x = self.feature_extractor(x).flatten(1)
         for layer in self.fc_layers:
             x = layer(x)
 

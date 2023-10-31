@@ -1,6 +1,7 @@
 import argparse
 import sys
 from os.path import dirname, realpath
+from pytorch_lightning.utilities.seed import seed_everything
 
 sys.path.append(dirname(dirname(realpath(__file__))))
 from src.lightning import MLP, CNN, Resnet, RiskModel
@@ -85,6 +86,7 @@ def main(args: argparse.Namespace):
         However, you may want to alter this code for special localization logic or to suit your risk
         model implementations
     """
+    seed_everything(3407)
     datamodule = NAME_TO_DATASET_CLASS[args.dataset_name](**vars(args[args.dataset_name]))
 
     print("Initializing model")
@@ -99,7 +101,7 @@ def main(args: argparse.Namespace):
         args[args.model_name]['init_lr'] = 1e-5
         exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet":
-        args[args.model_name]['init_lr'] = 3e-5
+        args[args.model_name]['init_lr'] = 5e-5
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pre_train'] = True
         exp_name = "Resnet_pretrain=" + str(args[args.model_name]['pre_train']) + "_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
