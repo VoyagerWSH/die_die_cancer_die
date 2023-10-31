@@ -16,7 +16,7 @@ class PathMnist(pl.LightningDataModule):
         Pytorch Lightning DataModule for PathMnist dataset. This will download the dataset, prepare data loaders and apply
         data augmentation.
     """
-    def __init__(self, use_data_augmentation=False, batch_size=1024, num_workers=8, **kwargs):
+    def __init__(self, use_data_augmentation=True, batch_size=1024, num_workers=8, **kwargs):
         super().__init__()
         self.save_hyperparameters()
 
@@ -35,9 +35,13 @@ class PathMnist(pl.LightningDataModule):
             torchvision.transforms.ToTensor()
         ])
         if self.use_data_augmentation:
-            # TODO: Implement some data augmentatons
-            self.train_transform = None
-            raise NotImplementedError("Not implemented yet")
+            self.train_transform = torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.RandomHorizontalFlip(),
+                torchvision.transforms.RandomVerticalFlip(),
+                torchvision.transforms.RandomRotation(degrees=(-60, 60)),
+                torchvision.transforms.GaussianBlur(kernel_size=3)
+            ])
         else:
             self.train_transform = torchvision.transforms.Compose([
                 torchvision.transforms.ToTensor()
