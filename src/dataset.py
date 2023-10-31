@@ -16,7 +16,7 @@ class PathMnist(pl.LightningDataModule):
         Pytorch Lightning DataModule for PathMnist dataset. This will download the dataset, prepare data loaders and apply
         data augmentation.
     """
-    def __init__(self, use_data_augmentation=False, batch_size=32, num_workers=8, **kwargs):
+    def __init__(self, use_data_augmentation=False, batch_size=64, num_workers=8, **kwargs):
         super().__init__()
         self.save_hyperparameters()
 
@@ -54,13 +54,13 @@ class PathMnist(pl.LightningDataModule):
         self.test = medmnist.PathMNIST(root='../data', split='test', download=True, transform=self.test_transform)
 
     def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.train, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
+        return torch.utils.data.DataLoader(self.train, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True, persistent_workers=True)
 
     def val_dataloader(self):
-        return torch.utils.data.DataLoader(self.val, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
+        return torch.utils.data.DataLoader(self.val, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False, persistent_workers=True)
 
     def test_dataloader(self):
-        return torch.utils.data.DataLoader(self.test, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
+        return torch.utils.data.DataLoader(self.test, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False, persistent_workers=True)
 
 # Voxel spacing is space between pixels in orig 512x512xN volumes
 # "pixel_spacing" stored in sample dicts is also in orig 512x512xN volumes

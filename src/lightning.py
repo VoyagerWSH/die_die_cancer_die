@@ -16,13 +16,14 @@ class Classifer(pl.LightningModule):
         self.num_classes = num_classes
         self.optimizer = optimizer
 
-        # Define loss fn for classifier
+        # define loss
         if loss == "Cross Entropy":
             self.loss = nn.CrossEntropyLoss()
 
         self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes)
         self.auc = torchmetrics.AUROC(task="binary" if self.num_classes == 2 else "multiclass", num_classes=self.num_classes)
 
+        # store pred
         self.training_outputs = []
         self.validation_outputs = []
         self.test_outputs = []
@@ -132,7 +133,7 @@ class MLP(Classifer):
 
         for input_size, output_size in zip(layers, layers[1:-1]):
             self.hidden_layers.append(nn.Linear(input_size, output_size))
-            self.hidden_layers.append(nn.ReLU(output_size))
+            self.hidden_layers.append(nn.ReLU())
             if use_bn:
                 self.hidden_layers.append(nn.BatchNorm1d(output_size))
 
@@ -167,6 +168,7 @@ class CNN(Classifer):
         self.dim = in_dim
         self.num_class = num_class
         
+        # conv -> norm -> relu -> pool
         for i in range(len(conv_layers)-2):
             self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[i], out_channels=conv_layers[i+1], kernel_size=3, stride=1, padding=0, padding_mode='zeros'))
             self.dim = conv_output_shape(self.dim, kernel_size=3, stride=1, padding=0)
@@ -186,16 +188,13 @@ class CNN(Classifer):
         self.conv_layers.append(nn.Conv2d(in_channels=conv_layers[-2], out_channels=conv_layers[-1], kernel_size=3, stride=1, padding=0, padding_mode='zeros'))
         self.dim = conv_output_shape(self.dim, kernel_size=3, stride=1, padding=0)
         
+        # global pooling to obtain C*1*1 image
         self.conv_layers.append(nn.MaxPool2d(self.dim))
         self.conv_layers.append(nn.Linear(conv_layers[-1], self.num_class))
     
     def forward(self, x):
-        batch_size, channels, width, height = x.size()
-        # x = x.view(batch_size, channels*width*height)
-
         for layer in self.conv_layers[:-1]:
             x = layer(x)
-
         return self.conv_layers[-1](x.flatten(1))
 
 class Resnet(Classifer):
@@ -212,15 +211,17 @@ class Resnet(Classifer):
             backbone = resnet18(weights="DEFAULT")
         else:
             backbone = resnet18(weights=None)
-        num_filters = backbone.fc.in_features
+        num_channels = backbone.fc.in_features
         layers = list(backbone.children())[:-1]
         self.feature_extractor = nn.Sequential(*layers)
 
-        self.fc_layers.append(nn.Linear(num_filters, 256))
-        self.fc_layers.append(nn.ReLU())
-        if self.use_bn:
-            self.fc_layers.append(nn.BatchNorm1d(256))
-        self.fc_layers.append(nn.Linear(256, self.num_class))
+        # self.fc_layers.append(nn.Linear(num_channels, 256))
+        # self.fc_layers.append(nn.ReLU())
+        # if self.use_bn:
+        #     self.fc_layers.append(nn.BatchNorm1d(256))
+        # self.fc_layers.append(nn.Linear(256, self.num_class))
+
+        self.fc_layers.append(nn.Linear(num_channels, self.num_class))
 
     def forward(self, x):
         if self.pre_train:

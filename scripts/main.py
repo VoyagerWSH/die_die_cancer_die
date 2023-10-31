@@ -7,6 +7,7 @@ from src.lightning import MLP, CNN, Resnet, RiskModel
 from src.dataset import PathMnist, NLST
 from lightning.pytorch.cli import LightningArgumentParser
 import lightning.pytorch as pl
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 NAME_TO_MODEL_CLASS = {
     "mlp": MLP,
@@ -98,8 +99,9 @@ def main(args: argparse.Namespace):
         args[args.model_name]['init_lr'] = 1e-5
         exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet":
-        args[args.model_name]['init_lr'] = 5e-5
-        args[args.model_name]['pre_train'] = False
+        args[args.model_name]['init_lr'] = 3e-5
+        args[args.model_name]['optimizer'] = "AdamW"
+        args[args.model_name]['pre_train'] = True
         exp_name = "Resnet_pretrain=" + str(args[args.model_name]['pre_train']) + "_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
 
     if args.checkpoint_path is None:
@@ -111,15 +113,21 @@ def main(args: argparse.Namespace):
     logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
     # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
-    args.trainer.accelerator = 'auto'
+    args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
     args.trainer.precision = "bf16-mixed" ## This mixed precision training is highly recommended
+    args.trainer.max_epochs = 200
+    args.trainer.num_nodes = 1 ## Number of GPU nodes for distributed training
 
     args.trainer.callbacks = [
         pl.callbacks.ModelCheckpoint(
             monitor=args.monitor_key,
             mode='min' if "loss" in args.monitor_key else "max",
             save_last=True
+        ),
+        EarlyStopping(
+            monitor=args.monitor_key,
+            mode='min' if "loss" in args.monitor_key else "max"
         )]
 
     trainer = pl.Trainer(**vars(args.trainer))
