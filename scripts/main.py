@@ -44,7 +44,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--monitor_key",
-        default="val_loss",
+        default="val_acc",
         help="Name of metric to use for checkpointing. (e.g. val_loss, val_acc)"
     )
 
@@ -111,8 +111,8 @@ def main(args: argparse.Namespace):
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
-    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
+    #logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
@@ -124,7 +124,8 @@ def main(args: argparse.Namespace):
         pl.callbacks.ModelCheckpoint(
             monitor=args.monitor_key,
             mode='min' if "loss" in args.monitor_key else "max",
-            save_last=True
+            save_last=True,
+            dirpath = "checkpoints/" + exp_name
         )]
         # EarlyStopping(
         #     monitor=args.monitor_key,
