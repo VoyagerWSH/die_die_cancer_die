@@ -39,8 +39,9 @@ class PathMnist(pl.LightningDataModule):
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
-                torchvision.transforms.RandomRotation(degrees=(-60, 60)),
-                torchvision.transforms.GaussianBlur(kernel_size=3)
+                torchvision.transforms.RandomRotation(degrees=(-360, 360)),
+                torchvision.transforms.RandomPerspective()
+                #torchvision.transforms.RandomResizedCrop(size=(28, 28))
             ])
         else:
             self.train_transform = torchvision.transforms.Compose([

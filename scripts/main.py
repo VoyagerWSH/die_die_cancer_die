@@ -117,7 +117,7 @@ def main(args: argparse.Namespace):
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
     args.trainer.precision = "bf16-mixed" ## This mixed precision training is highly recommended
-    args.trainer.max_epochs = 200
+    args.trainer.max_epochs = 300
     args.trainer.num_nodes = 1 ## Number of GPU nodes for distributed training
 
     args.trainer.callbacks = [
@@ -125,11 +125,11 @@ def main(args: argparse.Namespace):
             monitor=args.monitor_key,
             mode='min' if "loss" in args.monitor_key else "max",
             save_last=True
-        ),
-        EarlyStopping(
-            monitor=args.monitor_key,
-            mode='min' if "loss" in args.monitor_key else "max"
         )]
+        # EarlyStopping(
+        #     monitor=args.monitor_key,
+        #     mode='min' if "loss" in args.monitor_key else "max"
+        # )]
 
     trainer = pl.Trainer(**vars(args.trainer))
 

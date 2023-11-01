@@ -7,7 +7,7 @@ import torchvision
 from src.cindex import concordance_index
 from math import floor
 
-from torchvision.models import resnet18, ResNet18_Weights
+from torchvision.models import resnet18
 
 class Classifer(pl.LightningModule):
     def __init__(self, num_classes=9, init_lr=1e-4, optimizer="Adam", loss="Cross Entropy"):
@@ -208,29 +208,29 @@ class Resnet(Classifer):
         self.pre_train = pre_train
 
         if pre_train:
-            backbone = resnet18(weights="DEFAULT")
+            self.backbone = resnet18(weights="DEFAULT")
         else:
-            backbone = resnet18(weights=None)
-        num_channels = backbone.fc.in_features
-        layers = list(backbone.children())[:-1]
-        self.feature_extractor = nn.Sequential(*layers)
+            self.backbone = resnet18(weights=None)
+        #num_channels = backbone.fc.in_features
+        # layers = list(backbone.children())#[:-1]
+        # self.feature_extractor = nn.Sequential(*layers)
 
-        self.fc_layers.append(nn.Linear(num_channels, 256))
+        # self.fc_layers.append(nn.Linear(num_channels, 256))
+        # self.fc_layers.append(nn.ReLU())
+        # if self.use_bn:
+        #     self.fc_layers.append(nn.BatchNorm1d(256))
+
+        # self.fc_layers.append(nn.Linear(256, 128))
+        # self.fc_layers.append(nn.ReLU())
+        # if self.use_bn:
+        #     self.fc_layers.append(nn.BatchNorm1d(128))
+
+        # self.fc_layers.append(nn.Linear(128, 64))
+        # self.fc_layers.append(nn.ReLU())
+        # if self.use_bn:
+        #     self.fc_layers.append(nn.BatchNorm1d(64))
         self.fc_layers.append(nn.ReLU())
-        if self.use_bn:
-            self.fc_layers.append(nn.BatchNorm1d(256))
-
-        self.fc_layers.append(nn.Linear(256, 128))
-        self.fc_layers.append(nn.ReLU())
-        if self.use_bn:
-            self.fc_layers.append(nn.BatchNorm1d(128))
-
-        self.fc_layers.append(nn.Linear(128, 64))
-        self.fc_layers.append(nn.ReLU())
-        if self.use_bn:
-            self.fc_layers.append(nn.BatchNorm1d(64))
-
-        self.fc_layers.append(nn.Linear(64, self.num_class))
+        self.fc_layers.append(nn.Linear(1000, self.num_class))
 
 
     def forward(self, x):
@@ -241,7 +241,7 @@ class Resnet(Classifer):
         # else:
         #     x = self.feature_extractor(x).flatten(1)
         
-        x = self.feature_extractor(x).flatten(1)
+        x = self.backbone(x)
         for layer in self.fc_layers:
             x = layer(x)
 
