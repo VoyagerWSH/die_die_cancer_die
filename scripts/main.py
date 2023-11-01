@@ -61,6 +61,18 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
         help="Whether to train the model."
     )
 
+    parser.add_argument(
+        "--depth",
+        default=5,
+        help="define the depth of MLP."
+    )
+
+    parser.add_argument(
+        "--hidden_dim",
+        default=1024,
+        help="define the hidden dimension of MLP."
+    )
+
     return parser
 
 def parse_args() -> argparse.Namespace:
@@ -89,10 +101,12 @@ def main(args: argparse.Namespace):
     datamodule = NAME_TO_DATASET_CLASS[args.dataset_name](**vars(args[args.dataset_name]))
 
     print("Initializing model")
-    ## TODO: Implement your deep learning methods
+
     if args.model_name == "mlp":
-        args[args.model_name]['layers'] = [28*28*3, 1024, 1024, 512, 256, 128, 9]
-        exp_name = "MLP_layers=" + str(len(args[args.model_name]['layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
+        args[args.model_name]['layers'] = [28*28*3] + int(args.depth)*[int(args.hidden_dim)] + [9]
+        exp_name = "MLP_layers=" + str(args.depth) + "_hidden_dim=" + str(args.hidden_dim)
+        args[args.model_name]['init_lr'] = 1e-5
+        args[args.model_name]['optimizer'] = "AdamW"
     elif args.model_name == "cnn":
         args[args.model_name]['conv_layers'] = [3, 6, 12, 24]
         args[args.model_name]['pooling'] = "max"
@@ -117,7 +131,7 @@ def main(args: argparse.Namespace):
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
     args.trainer.precision = "bf16-mixed" ## This mixed precision training is highly recommended
-    args.trainer.max_epochs = 300
+    args.trainer.max_epochs = 100
     args.trainer.num_nodes = 1 ## Number of GPU nodes for distributed training
 
     args.trainer.callbacks = [
