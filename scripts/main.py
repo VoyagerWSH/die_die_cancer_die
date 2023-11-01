@@ -100,7 +100,7 @@ def main(args: argparse.Namespace):
         args[args.model_name]['init_lr'] = 1e-5
         exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet":
-        args[args.model_name]['init_lr'] = 5e-5
+        args[args.model_name]['init_lr'] = 2e-4
         args[args.model_name]['optimizer'] = "Adam"
         args[args.model_name]['pre_train'] = True
         exp_name = "Resnet_pretrain=" + str(args[args.model_name]['pre_train']) + "_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']

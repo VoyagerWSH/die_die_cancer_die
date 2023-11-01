@@ -213,11 +213,13 @@ class Resnet(Classifer):
             self.backbone = resnet18(weights=None)
 
         self.fc_layers.append(nn.ReLU())
+        self.fc_layers.append(nn.Dropout(0.5))
 
         self.fc_layers.append(nn.Linear(1000, 512))
         self.fc_layers.append(nn.ReLU())
-        if self.use_bn:
-            self.fc_layers.append(nn.BatchNorm1d(512))
+        self.fc_layers.append(nn.Dropout(0.5))
+        # if self.use_bn:
+        #     self.fc_layers.append(nn.BatchNorm1d(512))
         
         self.fc_layers.append(nn.Linear(512, num_class))
 

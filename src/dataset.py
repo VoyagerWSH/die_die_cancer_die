@@ -37,11 +37,7 @@ class PathMnist(pl.LightningDataModule):
         if self.use_data_augmentation:
             self.train_transform = torchvision.transforms.Compose([
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.RandomHorizontalFlip(),
-                torchvision.transforms.RandomVerticalFlip(),
-                torchvision.transforms.RandomRotation(degrees=(-360, 360)),
-                torchvision.transforms.RandomPerspective()
-                #torchvision.transforms.RandomResizedCrop(size=(28, 28))
+                torchvision.transforms.RandomRotation(degrees=(-360, 360))
             ])
         else:
             self.train_transform = torchvision.transforms.Compose([
