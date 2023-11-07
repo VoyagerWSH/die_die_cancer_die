@@ -3,7 +3,7 @@ import sys
 from os.path import dirname, realpath
 
 sys.path.append(dirname(dirname(realpath(__file__))))
-from src.lightning import MLP, CNN, Resnet, RiskModel
+from src.lightning import MLP, CNN, Resnet, CNN_3D, RiskModel
 from src.dataset import PathMnist, NLST
 from lightning.pytorch.cli import LightningArgumentParser
 import lightning.pytorch as pl
@@ -13,6 +13,7 @@ NAME_TO_MODEL_CLASS = {
     "mlp": MLP,
     "cnn": CNN,
     "resnet": Resnet,
+    "cnn_3d": CNN_3D,
     "risk_model": RiskModel
 }
 
@@ -44,7 +45,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--monitor_key",
-        default="val_acc",
+        default="val_auc",
         help="Name of metric to use for checkpointing. (e.g. val_loss, val_acc)"
     )
 
@@ -112,12 +113,18 @@ def main(args: argparse.Namespace):
         args[args.model_name]['pooling'] = "max"
         # args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['init_lr'] = 1e-5
-        exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
+        exp_name = "CNN_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet":
         args[args.model_name]['init_lr'] = 0.0006027654386720487
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pre_train'] = True
         exp_name = "Resnet_pretrain=" + str(args[args.model_name]['pre_train']) + "_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
+    elif args.model_name == "cnn_3d":
+        args[args.model_name]['init_lr'] = 1e-4
+        args[args.model_name]['optimizer'] = "AdamW"
+        args[args.model_name]['pooling'] = "max"
+        args[args.model_name]['conv_layers'] = [3, 6, 12, 24]
+        exp_name = "3D CNN_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
 
     if args.checkpoint_path is None:
         model = NAME_TO_MODEL_CLASS[args.model_name](**vars(args[args.model_name]))
@@ -125,8 +132,8 @@ def main(args: argparse.Namespace):
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
-    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
+    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger

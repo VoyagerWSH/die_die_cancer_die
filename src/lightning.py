@@ -20,6 +20,8 @@ class Classifer(pl.LightningModule):
         # define loss
         if loss == "Cross Entropy":
             self.loss = nn.CrossEntropyLoss()
+        if loss == "Binary Cross Entropy":
+            self.loss = nn.BCELoss()
 
         self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes)
         self.auc = torchmetrics.AUROC(task="binary" if self.num_classes == 2 else "multiclass", num_classes=self.num_classes)
@@ -235,6 +237,89 @@ class Resnet(Classifer):
 
         return x
 
+
+class CNN_3D(Classifer):
+    def __init__(self, conv_layers=[], in_dim = 256, in_depth = 200, num_classes = 2, pooling=None, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Binary Cross Entropy",**kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
+        self.save_hyperparameters()
+        
+        self.conv_layers = nn.ModuleList()
+        self.use_bn = use_bn
+        self.dim = in_dim
+        self.depth = in_depth
+        self.num_classes = num_classes
+        
+        # conv -> norm -> relu -> pool
+        for i in range(len(conv_layers)-2):
+            self.conv_layers.append(nn.Conv3d(in_channels=conv_layers[i], out_channels=conv_layers[i+1], kernel_size=5, stride=1, padding=0, padding_mode='zeros'))
+            self.dim = conv_output_shape(self.dim, kernel_size=5, stride=1, padding=0)
+            self.depth = conv_output_shape(self.depth, kernel_size=5, stride=1, padding=0)
+            
+            if use_bn:
+                self.conv_layers.append(nn.BatchNorm3d(conv_layers[i+1], eps=1e-5, momentum=0.1))
+            
+            self.conv_layers.append(nn.ReLU())
+
+            if pooling == "max":
+                self.conv_layers.append(nn.MaxPool3d(5, stride=2))
+                self.dim = conv_output_shape(self.dim, kernel_size=5, stride=2)
+                self.depth = conv_output_shape(self.depth, kernel_size=5, stride=2)
+            if pooling == "avg":
+                self.conv_layers.append(nn.AvgPool3d(5, stride=2))
+                self.dim = conv_output_shape(self.dim, kernel_size=5, stride=2)
+                self.depth = conv_output_shape(self.depth, kernel_size=5, stride=2)
+        
+        self.conv_layers.append(nn.Conv3d(in_channels=conv_layers[-2], out_channels=conv_layers[-1], kernel_size=5, stride=2, padding=0, padding_mode='zeros'))
+        self.dim = conv_output_shape(self.dim, kernel_size=5, stride=2, padding=0)
+        self.depth = conv_output_shape(self.depth, kernel_size=5, stride=2, padding=0)
+    
+        # global pooling to obtain C*1*1*1 image
+        self.conv_layers.append(nn.MaxPool3d((self.depth, self.dim, self.dim)))
+        self.conv_layers.append(nn.Linear(conv_layers[-1], 1))
+    
+    def forward(self, x):
+        for layer in self.conv_layers[:-1]:
+            x = layer(x)
+        return nn.Sigmoid(self.conv_layers[-1](x.flatten(1)))
+    
+class Resnet_3D(Classifer):
+    def __init__(self, num_classes = 2, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Binary Cross Entropy", pre_train = True, dropout_p=0, n_fc = 2, **kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
+        self.save_hyperparameters()
+
+        self.use_bn = use_bn
+        self.num_classes = num_classes
+        self.fc_layers = nn.ModuleList()
+        self.pre_train = pre_train
+
+        if pre_train:
+            self.backbone = resnet18(weights="DEFAULT")
+        else:
+            self.backbone = resnet18(weights=None)
+        in_features = self.backbone.fc.out_features
+        out_features = 512
+
+        self.fc_layers.append (nn.ReLU())
+        for i in range(n_fc):
+            self.fc_layers.append(nn.Linear(in_features, out_features))
+            self.fc_layers.append (nn.ReLU())
+            self.fc_layers.append(nn.Dropout(dropout_p))
+            in_features = out_features
+        self.fc_layers.append(nn.Linear(out_features, num_classes))
+
+    def forward(self, x):
+        _, C, D, H, W = x.shape
+        x = nn.Conv3d(in_channels=C, out_channels=C, kernel_size=(D, 1, 1), stride=1)
+        x = x.squeeze(2)
+        if self.use_bn:
+            x = nn.BatchNorm2d(C, eps=1e-5, momentum=0.1)
+        x = nn.ReLU(x)
+
+        x = self.backbone(x)
+        for layer in self.fc_layers:
+            x = layer(x)
+
+        return x
 
 
 NLST_CENSORING_DIST = {

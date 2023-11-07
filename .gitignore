@@ -4,3 +4,4 @@ scripts/wandb/
 scripts/checkpoints
 data/
 src/__pycache__/
+src/test.ipynb
