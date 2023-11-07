@@ -6,6 +6,7 @@ import torchmetrics
 import torchvision
 from src.cindex import concordance_index
 from math import floor
+import random
 
 from torchvision.models import resnet18
 
@@ -116,28 +117,33 @@ class Classifer(pl.LightningModule):
     def configure_optimizers(self):
         if self.optimizer == "Adam":
             return torch.optim.Adam(self.parameters(), lr=self.init_lr)
-        if self.optimizer == "AdamW":
+        elif self.optimizer == "AdamW":
             return torch.optim.AdamW(self.parameters(), lr=self.init_lr)
+        elif self.optimizer == "SGD":
+            return torch.optim.SGD(self.parameters(), lr=self.init_lr)
 
 
 
 
 class MLP(Classifer):
-    def __init__(self, layers=[28*28*3, 1024, 1024, 512, 256, 128, 9], use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
-        super().__init__(num_classes=layers[-1], init_lr=init_lr, optimizer=optimizer, loss=loss)
+    def __init__(self, in_features=28*28*3, num_classes = 9, n_fc=2, hidden_dim=1024, use_bn=True, init_lr = 1e-3, dropout_p=0, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
         
-        assert(len(layers) >= 2)
-        self.hidden_layers = nn.ModuleList()
+        self.fc_layers = nn.ModuleList()
         self.use_bn = use_bn
 
-        for input_size, output_size in zip(layers, layers[1:-1]):
-            self.hidden_layers.append(nn.Linear(input_size, output_size))
-            self.hidden_layers.append(nn.ReLU())
-            if use_bn:
-                self.hidden_layers.append(nn.BatchNorm1d(output_size))
+        out_features = hidden_dim
+        for i in range(n_fc):
+            self.fc_layers.append(nn.Linear(in_features, out_features))
+            if self.use_bn:
+                self.fc_layers.append(nn.BatchNorm1d(out_features))
 
-        self.hidden_layers.append(nn.Linear(layers[-2], layers[-1]))
+            self.fc_layers.append (nn.ReLU())
+            self.fc_layers.append(nn.Dropout(dropout_p))
+            in_features = out_features
+            
+        self.fc_layers.append(nn.Linear(out_features, num_classes))
 
     def forward(self, x):
         batch_size, channels, width, height = x.size()
@@ -159,14 +165,14 @@ def conv_output_shape(dim, kernel_size=1, stride=1, padding=0, dilation=1):
     return dim
 
 class CNN(Classifer):
-    def __init__(self, conv_layers=[], in_dim = 28, num_class = 9, pooling=None, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
-        super().__init__(num_classes=num_class, init_lr=init_lr, optimizer=optimizer, loss=loss)
+    def __init__(self, conv_layers=[], in_dim = 28, num_classes = 9, pooling=None, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy",**kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
         
         self.conv_layers = nn.ModuleList()
         self.use_bn = use_bn
         self.dim = in_dim
-        self.num_class = num_class
+        self.num_classes = num_classes
         
         # conv -> norm -> relu -> pool
         for i in range(len(conv_layers)-2):
@@ -190,7 +196,7 @@ class CNN(Classifer):
         
         # global pooling to obtain C*1*1 image
         self.conv_layers.append(nn.MaxPool2d(self.dim))
-        self.conv_layers.append(nn.Linear(conv_layers[-1], self.num_class))
+        self.conv_layers.append(nn.Linear(conv_layers[-1], self.num_classes))
     
     def forward(self, x):
         for layer in self.conv_layers[:-1]:
@@ -198,12 +204,12 @@ class CNN(Classifer):
         return self.conv_layers[-1](x.flatten(1))
 
 class Resnet(Classifer):
-    def __init__(self, num_class = 9, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy", pre_train = True, **kwargs):
-        super().__init__(num_classes=num_class, init_lr=init_lr, optimizer=optimizer, loss=loss)
+    def __init__(self, num_classes = 9, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Cross Entropy", pre_train = True, dropout_p=0, n_fc = 2, **kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
 
         self.use_bn = use_bn
-        self.num_class = num_class
+        self.num_classes = num_classes
         self.fc_layers = nn.ModuleList()
         self.pre_train = pre_train
 
@@ -211,17 +217,16 @@ class Resnet(Classifer):
             self.backbone = resnet18(weights="DEFAULT")
         else:
             self.backbone = resnet18(weights=None)
+        in_features = self.backbone.fc.out_features
+        out_features = 512
 
-        self.fc_layers.append(nn.ReLU())
-        self.fc_layers.append(nn.Dropout(0.5))
-
-        self.fc_layers.append(nn.Linear(1000, 512))
-        self.fc_layers.append(nn.ReLU())
-        self.fc_layers.append(nn.Dropout(0.5))
-        # if self.use_bn:
-        #     self.fc_layers.append(nn.BatchNorm1d(512))
-        
-        self.fc_layers.append(nn.Linear(512, num_class))
+        self.fc_layers.append (nn.ReLU())
+        for i in range(n_fc):
+            self.fc_layers.append(nn.Linear(in_features, out_features))
+            self.fc_layers.append (nn.ReLU())
+            self.fc_layers.append(nn.Dropout(dropout_p))
+            in_features = out_features
+        self.fc_layers.append(nn.Linear(out_features, num_classes))
 
     def forward(self, x):
         x = self.backbone(x)

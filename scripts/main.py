@@ -97,7 +97,7 @@ def main(args: argparse.Namespace):
         However, you may want to alter this code for special localization logic or to suit your risk
         model implementations
     """
-    pl.seed_everything(3407)
+    pl.seed_everything(1312)
     datamodule = NAME_TO_DATASET_CLASS[args.dataset_name](**vars(args[args.dataset_name]))
 
     print("Initializing model")
@@ -114,7 +114,7 @@ def main(args: argparse.Namespace):
         args[args.model_name]['init_lr'] = 1e-5
         exp_name = "MLP_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet":
-        args[args.model_name]['init_lr'] = 1e-4
+        args[args.model_name]['init_lr'] = 0.0006027654386720487
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pre_train'] = True
         exp_name = "Resnet_pretrain=" + str(args[args.model_name]['pre_train']) + "_convLayers=18_fc=2" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
@@ -131,7 +131,7 @@ def main(args: argparse.Namespace):
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
     args.trainer.precision = "bf16-mixed" ## This mixed precision training is highly recommended
-    args.trainer.max_epochs = 100
+    args.trainer.max_epochs = 200
     args.trainer.num_nodes = 1 ## Number of GPU nodes for distributed training
 
     args.trainer.callbacks = [
