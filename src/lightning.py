@@ -21,7 +21,7 @@ class Classifer(pl.LightningModule):
         if loss == "Cross Entropy":
             self.loss = nn.CrossEntropyLoss()
         if loss == "Binary Cross Entropy":
-            self.loss = nn.BCELoss()
+            self.loss = nn.BCEWithLogitsLoss()
 
         self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes)
         self.auc = torchmetrics.AUROC(task="binary" if self.num_classes == 2 else "multiclass", num_classes=self.num_classes)
@@ -41,6 +41,7 @@ class Classifer(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
+        y = y.float()
 
         y_hat = self.forward(x)
         loss = self.loss(y_hat, y)
@@ -57,6 +58,7 @@ class Classifer(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
+        y = y.float()
 
         y_hat = self.forward(x)
         loss = self.loss(y_hat, y)
@@ -72,6 +74,7 @@ class Classifer(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
+        y = y.float()
         
         y_hat = self.forward(x)
         loss = self.loss(y_hat, y)
@@ -84,6 +87,7 @@ class Classifer(pl.LightningModule):
             "y": y
         })
         return loss
+
     def on_train_epoch_end(self):
         y_hat = torch.cat([o["y_hat"] for o in self.training_outputs])
         y = torch.cat([o["y"] for o in self.training_outputs])
@@ -275,12 +279,67 @@ class CNN_3D(Classifer):
     
         # global pooling to obtain C*1*1*1 image
         self.conv_layers.append(nn.MaxPool3d((self.depth, self.dim, self.dim)))
-        self.conv_layers.append(nn.Linear(conv_layers[-1], 1))
+        self.conv_layers.append(nn.Linear(conv_layers[-1], self.num_classes))
+
+    def training_step(self, batch, batch_idx):
+        x, y = self.get_xy(batch)
+        y_inv = 1-y
+        y = torch.cat((y.unsqueeze(-1), y_inv.unsqueeze(-1)), dim=-1).float()
+
+        y_hat = self.forward(x)
+        loss = self.loss(y_hat, y)
+
+        self.log('train_acc', self.accuracy(y_hat, y), prog_bar=True)
+        self.log('train_loss', loss, prog_bar=True)
+
+        ## Store the predictions and labels for use at the end of the epoch
+        self.training_outputs.append({
+            "y_hat": y_hat,
+            "y": y
+        })
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = self.get_xy(batch)
+        y_inv = 1-y
+        y = torch.cat((y.unsqueeze(-1), y_inv.unsqueeze(-1)), dim=-1).float()
+
+        y_hat = self.forward(x)
+        loss = self.loss(y_hat, y)
+
+        self.log('val_loss', loss, sync_dist=True, prog_bar=True)
+        self.log("val_acc", self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
+
+        self.validation_outputs.append({
+            "y_hat": y_hat,
+            "y": y
+        })
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        x, y = self.get_xy(batch)
+        y_inv = 1-y
+        y = torch.cat((y.unsqueeze(-1), y_inv.unsqueeze(-1)), dim=-1).float()
+        
+        y_hat = self.forward(x)
+        loss = self.loss(y_hat, y)
+
+        self.log('test_loss', loss, sync_dist=True, prog_bar=True)
+        self.log('test_acc', self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
+
+        self.test_outputs.append({
+            "y_hat": y_hat,
+            "y": y
+        })
+        return loss
     
     def forward(self, x):
+        x = torch.reshape(x, (x.shape[0], x.shape[1], x.shape[4], x.shape[2], x.shape[3]))
         for layer in self.conv_layers[:-1]:
             x = layer(x)
-        return nn.Sigmoid(self.conv_layers[-1](x.flatten(1)))
+        x = x.flatten(1)
+        x = self.conv_layers[-1](x)
+        return x
     
 class Resnet_3D(Classifer):
     def __init__(self, num_classes = 2, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Binary Cross Entropy", pre_train = True, dropout_p=0, n_fc = 2, **kwargs):

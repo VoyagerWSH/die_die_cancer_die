@@ -1,6 +1,6 @@
 .vscode/launch.json
 checkpoints/
-scripts/wandb/
+wandb/
 scripts/checkpoints
 data/
 src/__pycache__/

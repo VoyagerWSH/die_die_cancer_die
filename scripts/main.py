@@ -27,7 +27,7 @@ def add_main_args(parser: LightningArgumentParser) -> LightningArgumentParser:
 
     parser.add_argument(
         "--model_name",
-        default="resnet",
+        default="cnn_3d",
         help="Name of model to use. Options include: mlp, cnn, resnet",
     )
 
@@ -123,7 +123,7 @@ def main(args: argparse.Namespace):
         args[args.model_name]['init_lr'] = 1e-4
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pooling'] = "max"
-        args[args.model_name]['conv_layers'] = [3, 6, 12, 24]
+        args[args.model_name]['conv_layers'] = [1, 3, 6, 12, 24]
         exp_name = "3D CNN_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
 
     if args.checkpoint_path is None:
@@ -132,8 +132,8 @@ def main(args: argparse.Namespace):
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
-    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
+    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
