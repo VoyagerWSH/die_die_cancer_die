@@ -284,7 +284,7 @@ class CNN_3D(Classifer):
     def training_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
         y_inv = 1-y
-        y = torch.cat((y.unsqueeze(-1), y_inv.unsqueeze(-1)), dim=-1).float()
+        y = torch.cat((y_inv.unsqueeze(-1), y.unsqueeze(-1)), dim=-1).float()
 
         y_hat = self.forward(x)
         loss = self.loss(y_hat, y)
@@ -302,7 +302,7 @@ class CNN_3D(Classifer):
     def validation_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
         y_inv = 1-y
-        y = torch.cat((y.unsqueeze(-1), y_inv.unsqueeze(-1)), dim=-1).float()
+        y = torch.cat((y_inv.unsqueeze(-1), y.unsqueeze(-1)), dim=-1).float()
 
         y_hat = self.forward(x)
         loss = self.loss(y_hat, y)
@@ -319,7 +319,7 @@ class CNN_3D(Classifer):
     def test_step(self, batch, batch_idx):
         x, y = self.get_xy(batch)
         y_inv = 1-y
-        y = torch.cat((y.unsqueeze(-1), y_inv.unsqueeze(-1)), dim=-1).float()
+        y = torch.cat((y_inv.unsqueeze(-1), y.unsqueeze(-1)), dim=-1).float()
         
         y_hat = self.forward(x)
         loss = self.loss(y_hat, y)
