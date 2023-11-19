@@ -82,7 +82,7 @@ class NLST(pl.LightningDataModule):
     def __init__(
             self,
             use_data_augmentation=False,
-            batch_size=32,
+            batch_size=6,
             num_workers=4,
             nlst_metadata_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/full_nlst_google.json",
             valid_exam_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/valid_exams.p",

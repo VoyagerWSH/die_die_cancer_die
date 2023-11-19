@@ -286,7 +286,7 @@ class CNN_3D(Classifer):
         x = self.conv_layers[-1](x)
         return x
     
-class Resnet_3D(Classifer):
+class Resnet_2D_to_3D(Classifer):
     def __init__(self, num_classes = 2, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Binary Cross Entropy", pre_train = True, dropout_p=0, n_fc = 2, **kwargs):
         super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
@@ -325,6 +325,36 @@ class Resnet_3D(Classifer):
 
         return x
 
+class Resnet_3D(Classifer):
+    def __init__(self, num_classes = 2, init_lr = 1e-3, optimizer = "AdamW", loss = "Cross Entropy", pre_train = True, **kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
+        self.save_hyperparameters()
+
+        self.num_classes = num_classes
+        self.fc_layers = nn.ModuleList()
+
+        self.backbone = torchvision.models.video.r3d_18(pretrained=pre_train)
+        in_features = self.backbone.fc.out_features
+
+        self.fc_layers.append(nn.ReLU())
+        self.fc_layers.append(nn.Linear(in_features, 200))
+        self.fc_layers.append (nn.ReLU())
+        self.fc_layers.append(nn.Linear(200, 20))
+        self.fc_layers.append (nn.ReLU())
+        self.fc_layers.append(nn.Linear(20, self.num_classes))
+
+    def forward(self, x):
+        # (BCHWD -> BCDHW) for conv_3d
+        x = torch.reshape(x, (x.shape[0], x.shape[1], x.shape[4], x.shape[2], x.shape[3]))
+        
+        # duplicate channel values to fit in ResNet
+        x = x.expand(x.shape[0], x.shape[1]*3, x.shape[2], x.shape[3], x.shape[4])
+        
+        x = self.backbone(x)
+        for layer in self.fc_layers:
+            x = layer(x)
+
+        return x
 
 NLST_CENSORING_DIST = {
     "0": 0.9851928130104401,
