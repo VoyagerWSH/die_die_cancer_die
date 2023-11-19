@@ -337,12 +337,14 @@ class Resnet_3D(Classifer):
             self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
         else:
             self.backbone = torchvision.models.video.r3d_18()
+
+        # change global avg pool to global max pool
+        self.backbone.avgpool = nn.AdaptiveMaxPool3d(1)
+
         in_features = self.backbone.fc.out_features
 
-        self.fc_layers.append(nn.ReLU())
-        self.fc_layers.append(nn.Linear(in_features, 200))
         self.fc_layers.append (nn.ReLU())
-        self.fc_layers.append(nn.Linear(200, 20))
+        self.fc_layers.append(nn.Linear(in_features, 20))
         self.fc_layers.append (nn.ReLU())
         self.fc_layers.append(nn.Linear(20, self.num_classes))
 
