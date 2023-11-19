@@ -31,10 +31,6 @@ class PathMnist(pl.LightningDataModule):
             Prepare data transforms for train and test data.
             Note, you may want to apply data augmentation (see torchvision) for the train data.
         '''
-        self.test_transform = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
         if self.use_data_augmentation:
             self.train_transform = torchvision.transforms.Compose([
                 torchvision.transforms.ToTensor(),
@@ -42,10 +38,14 @@ class PathMnist(pl.LightningDataModule):
                 torchvision.transforms.RandomResizedCrop(size=(28, 28), antialias=True),
                 torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-        else:
-            self.train_transform = torchvision.transforms.Compose([
-                torchvision.transforms.ToTensor()
+            self.test_transform = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
+        else:
+            self.train_transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+            self.test_transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+
 
     def prepare_data(self):
         medmnist.PathMNIST(root='../data', split='train', download=True, transform=self.train_transform)
