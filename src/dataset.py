@@ -9,6 +9,7 @@ import json
 import tqdm
 import os
 from collections import Counter
+from torch.utils.data import WeightedRandomSampler
 import pickle
 
 class PathMnist(pl.LightningDataModule):
@@ -91,7 +92,7 @@ class NLST(pl.LightningDataModule):
             num_images=200,
             max_followup=6,
             img_size = [256, 256],
-            class_balance=False,
+            class_balance=True,
             **kwargs):
         super().__init__()
         self.save_hyperparameters()
@@ -194,9 +195,14 @@ class NLST(pl.LightningDataModule):
                     dataset.append(sample)
 
         if self.class_balance:
-            # This data is highly imbalanced!
-            # Introduce a method to deal with class imbalance (hint: think about your data loader)
-            raise NotImplementedError("Not implemented yet")
+            weights = []
+            for train_data in self.train:
+                if train_data["y"] == 0:
+                    weights.append(0.2)
+                else:
+                    weights.append(0.8)
+            idx = WeightedRandomSampler(weights, len(self.train), replacement=True)
+            self.train = [self.train[i] for i in idx]
 
         self.train = NLST_Dataset(self.train, self.train_transform, self.normalize, self.img_size, self.num_images)
         self.val = NLST_Dataset(self.val, self.test_transform, self.normalize, self.img_size, self.num_images)
