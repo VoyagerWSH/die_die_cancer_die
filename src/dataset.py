@@ -84,7 +84,7 @@ class NLST(pl.LightningDataModule):
             self,
             use_data_augmentation=True,
             batch_size=6,
-            num_workers=6,
+            num_workers=2,
             nlst_metadata_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/full_nlst_google.json",
             valid_exam_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/valid_exams.p",
             nlst_dir="/scratch/datasets/nlst/preprocessed",
