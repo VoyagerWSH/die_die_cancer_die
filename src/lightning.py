@@ -287,11 +287,10 @@ class CNN_3D(Classifer):
         return x
     
 class Resnet_2D_to_3D(Classifer):
-    def __init__(self, num_classes = 2, use_bn=True, init_lr = 1e-3, optimizer = "Adam", loss = "Binary Cross Entropy", pre_train = True, dropout_p=0, n_fc = 2, **kwargs):
+    def __init__(self, num_classes = 2, init_lr = 1e-3, optimizer = "AdamW", loss = "Cross Entropy", pre_train = True, **kwargs):
         super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
         self.save_hyperparameters()
 
-        self.use_bn = use_bn
         self.num_classes = num_classes
         self.fc_layers = nn.ModuleList()
         self.pre_train = pre_train
@@ -301,28 +300,30 @@ class Resnet_2D_to_3D(Classifer):
         else:
             self.backbone = resnet18(weights=None)
         in_features = self.backbone.fc.out_features
-        out_features = 512
-
-        self.fc_layers.append (nn.ReLU())
-        for i in range(n_fc):
-            self.fc_layers.append(nn.Linear(in_features, out_features))
-            self.fc_layers.append (nn.ReLU())
-            self.fc_layers.append(nn.Dropout(dropout_p))
-            in_features = out_features
-        self.fc_layers.append(nn.Linear(out_features, num_classes))
+        self.fc_layers.append(nn.ReLU())
+        self.fc_layers.append(nn.Linear(in_features, 512))
+        self.fc_layers.append(nn.ReLU())
+        self.fc_layers.append(nn.Linear(512, num_classes))
+        self.fc_layers.append(nn.ReLU())
+        self.final_layer = nn.Linear(67 * 2, 2)
 
     def forward(self, x):
-        _, C, D, H, W = x.shape
-        x = nn.Conv3d(in_channels=C, out_channels=C, kernel_size=(D, 1, 1), stride=1)
-        x = x.squeeze(2)
-        if self.use_bn:
-            x = nn.BatchNorm2d(C, eps=1e-5, momentum=0.1)
-        x = nn.ReLU(x)
 
-        x = self.backbone(x)
-        for layer in self.fc_layers:
-            x = layer(x)
-
+        # (BCHWD -> BCDHW) for conv_3d
+        x = torch.reshape(x, (x.shape[0], x.shape[1], x.shape[4], x.shape[2], x.shape[3]))
+        # (BCDHW -> BDHW) after squeeze
+        x = x.squeeze(1)
+        # duplicate channel values to fit in ResNet
+        x = torch.cat((x, x[:,0:1,:,:]),1)
+        lst = []
+        for i in range(0, x.shape[1], 3):
+            x_sub = x[:,i:i+3,:,:]
+            x_sub = self.backbone(x_sub)
+            for layer in self.fc_layers:
+                x_sub = layer(x_sub)
+            lst.append(x_sub)
+        x = torch.cat(tuple(lst),1)
+        x = self.final_layer(x)
         return x
 
 class Resnet_3D(Classifer):
