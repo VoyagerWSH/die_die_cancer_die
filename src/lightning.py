@@ -333,7 +333,10 @@ class Resnet_3D(Classifer):
         self.num_classes = num_classes
         self.fc_layers = nn.ModuleList()
 
-        self.backbone = torchvision.models.video.r3d_18(pretrained=pre_train)
+        if pre_train:
+            self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
+        else:
+            self.backbone = torchvision.models.video.r3d_18()
         in_features = self.backbone.fc.out_features
 
         self.fc_layers.append(nn.ReLU())
