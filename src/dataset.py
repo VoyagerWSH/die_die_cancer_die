@@ -81,7 +81,7 @@ class NLST(pl.LightningDataModule):
 
     def __init__(
             self,
-            use_data_augmentation=False,
+            use_data_augmentation=True,
             batch_size=6,
             num_workers=4,
             nlst_metadata_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/full_nlst_google.json",
@@ -130,10 +130,15 @@ class NLST(pl.LightningDataModule):
         ])
 
         if self.use_data_augmentation:
-            # TODO: Support some data augmentations. Hint: consider using torchio.
-            raise NotImplementedError("Not implemented yet")
-
-
+            self.train_transform = tio.transforms.Compose([
+            resample,
+            padding,
+            resize,
+            tio.RandomFlip(),
+            tio.RandomAffine(),
+            tio.RandomNoise()
+        ])
+            
         self.test_transform = tio.transforms.Compose([
             resample,
             padding,
