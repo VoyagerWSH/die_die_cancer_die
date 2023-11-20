@@ -342,19 +342,21 @@ class Resnet_3D(Classifer):
         # change global avg pool to global max pool
         self.backbone.avgpool = nn.AdaptiveMaxPool3d(1)
 
-        in_features = self.backbone.fc.out_features
+        # average over the conv_3d filter channels to fit the input of channel 1
+        sd = self.backbone.state_dict()
+        conv_c1 = torch.mean(sd['stem.0.weight'], dim=1).unsqueeze(1)
+        self.backbone.stem[0] = nn.Conv3d(1, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False)
+        sd['stem.0.weight'] = conv_c1
+        self.backbone.load_state_dict(sd)
 
+        # change the last fc layer to fit the number of classes
+        self.backbone.fc = nn.Linear(512, 128)
         self.fc_layers.append (nn.ReLU())
-        self.fc_layers.append(nn.Linear(in_features, 20))
-        self.fc_layers.append (nn.ReLU())
-        self.fc_layers.append(nn.Linear(20, self.num_classes))
+        self.fc_layers.append(nn.Linear(128, self.num_classes))
 
     def forward(self, x):
         # (BCHWD -> BCDHW) for conv_3d
         x = torch.reshape(x, (x.shape[0], x.shape[1], x.shape[4], x.shape[2], x.shape[3]))
-        
-        # duplicate channel values to fit in ResNet
-        x = x.expand(x.shape[0], x.shape[1]*3, x.shape[2], x.shape[3], x.shape[4])
         
         x = self.backbone(x)
         for layer in self.fc_layers:
