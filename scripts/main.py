@@ -128,12 +128,12 @@ def main(args: argparse.Namespace):
         args[args.model_name]['conv_layers'] = [1, 3, 6, 12, 24]
         exp_name = "3D CNN_convLayers=" + str(len(args[args.model_name]['conv_layers'])) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet_2d_to_3d":
-        args[args.model_name]['init_lr'] = 1e-3
+        args[args.model_name]['init_lr'] = 1e-4
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pre_train'] = True
         exp_name = "Resnet_2D_to_3D_pretrain=" + str(args[args.model_name]['pre_train']) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "resnet_3d":
-        args[args.model_name]['init_lr'] = 1e-3
+        args[args.model_name]['init_lr'] = 1e-4
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pre_train'] = True
         exp_name = "3D ResNet" + "_pretrain=" + str(args[args.model_name]['pre_train']) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
@@ -146,7 +146,7 @@ def main(args: argparse.Namespace):
 
     print("Initializing trainer")
     logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name)
-    #logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
+    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
