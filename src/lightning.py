@@ -335,7 +335,8 @@ class Resnet_3D(Classifer):
         self.fc_layers = nn.ModuleList()
 
         if pre_train:
-            self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
+            self.backbone = torch.load('checkpoints/r3d_18.pt')
+            # self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
         else:
             self.backbone = torchvision.models.video.r3d_18()
 

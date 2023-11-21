@@ -5,3 +5,4 @@ scripts/checkpoints
 data/
 src/__pycache__/
 src/test.ipynb
+random.ipynb
