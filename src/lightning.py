@@ -365,6 +365,138 @@ class Resnet_3D(Classifer):
 
         return x
 
+class Attn_Guided_Resnet(Classifer):
+    def __init__(self, num_classes = 2, init_lr = 1e-3, optimizer = "AdamW", loss = "Cross Entropy", pre_train = True, **kwargs):
+        super().__init__(num_classes=num_classes, init_lr=init_lr, optimizer=optimizer, loss=loss)
+        self.save_hyperparameters()
+
+        self.num_classes = num_classes
+        self.layers_after_attn = nn.ModuleList()
+
+        if pre_train:
+            self.backbone = torch.load('checkpoints/r3d_18.pt')
+            # self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
+        else:
+            self.backbone = torchvision.models.video.r3d_18()
+
+        # At the strat of ResNet: average over the conv_3d filter channels to fit the input of channel 1
+        sd = self.backbone.state_dict()
+        conv_c1 = torch.mean(sd['stem.0.weight'], dim=1).unsqueeze(1)
+        self.backbone.stem[0] = nn.Conv3d(1, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False)
+        sd['stem.0.weight'] = conv_c1
+        self.backbone.load_state_dict(sd)
+
+        # delete the avgpool layer and the last fc layer
+        self.backbone = nn.Sequential(*list(self.backbone.children())[:-2])
+
+        # attention convolution (weighted avg pool)
+        # out_channel = 1 because we want to collapse the attention of all channels into one
+        self.attn_pool = nn.Conv3d(512, 1, kernel_size=1, stride=1)
+
+        # for downsampling the mask when claculating the attentioin
+
+        # change the last fc layer to fit the number of classes
+        self.layers_after_attn.append(nn.Linear(512, 128))
+        self.layers_after_attn.append(nn.ReLU())
+        self.layers_after_attn.append(nn.Linear(128, self.num_classes))
+
+    def get_xy(self, batch):
+        assert isinstance(batch, dict)
+        x, y, mask = batch["x"], batch["y_seq"][:,0], batch["mask"]
+        return x, y.to(torch.long).view(-1), mask
+    
+    def attn_guided_loss(self, attn_map, mask):
+        # downsample the mask to the embedding space of the attention map
+        B, _, _, _, _ = mask.shape
+        self.adpt_max_pool = nn.AdaptiveMaxPool3d(attn_map.shape[2:])
+        mask = self.adpt_max_pool(mask)
+        attn_loss = -torch.log(torch.dot(mask.view(-1), attn_map.view(-1))+1e-8)/B
+        return attn_loss
+    
+    def training_step(self, batch, batch_idx):
+        x, y, mask = self.get_xy(batch)
+        # (BCHWD -> BCDHW) for conv_3d
+        x = torch.permute(x, (0, 1, 4, 2, 3))
+        mask = torch.permute(mask, (0, 1, 4, 2, 3))
+
+        y_hat, attn_map = self.forward(x)
+        pred_loss = self.loss(y_hat, y)
+        attn_loss = self.attn_guided_loss(attn_map, mask)
+        loss = pred_loss + attn_loss
+
+        self.log('train_acc', self.accuracy(y_hat, y), prog_bar=True)
+        self.log('train_loss', loss, prog_bar=True)
+
+        self.training_outputs.append({
+            "y_hat": y_hat,
+            "y": y,
+            "attn_map": attn_map,
+            "mask": mask
+        })
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y, mask = self.get_xy(batch)
+        # (BCHWD -> BCDHW) for conv_3d
+        x = torch.permute(x, (0, 1, 4, 2, 3))
+        mask = torch.permute(mask, (0, 1, 4, 2, 3))
+
+        y_hat, attn_map = self.forward(x)
+        pred_loss = self.loss(y_hat, y)
+        attn_loss = self.attn_guided_loss(attn_map, mask)
+        loss = pred_loss + attn_loss
+
+        self.log('val_loss', loss, sync_dist=True, prog_bar=True)
+        self.log("val_acc", self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
+
+        self.validation_outputs.append({
+            "y_hat": y_hat,
+            "y": y,
+            "attn_map": attn_map,
+            "mask": mask
+        })
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        x, y, mask = self.get_xy(batch)
+        # (BCHWD -> BCDHW) for conv_3d
+        x = torch.permute(x, (0, 1, 4, 2, 3))
+        mask = torch.permute(mask, (0, 1, 4, 2, 3))
+
+        y_hat, attn_map = self.forward(x)
+        pred_loss = self.loss(y_hat, y)
+        attn_loss = self.attn_guided_loss(attn_map, mask)
+        loss = pred_loss + attn_loss
+
+        self.log('test_loss', loss, sync_dist=True, prog_bar=True)
+        self.log('test_acc', self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
+
+        self.test_outputs.append({
+            "y_hat": y_hat,
+            "y": y,
+            "attn_map": attn_map,
+            "mask": mask
+        })
+        return loss
+
+    def forward(self, x):
+        # run the model to get the embedding
+        z = self.backbone(x)
+
+        # compute alpha for attantion guided pooling
+        alpha = self.attn_pool(z)
+        B, C_, D_, H_, W_ = alpha.shape
+        assert(C_ == 1)
+        alpha = F.softmax(alpha.view(B, -1), dim=1).view(B, C_, D_, H_, W_)
+
+        # attention guided pooling
+        output = (alpha * z).sum(dim=(2, 3, 4))
+        
+        for layer in self.layers_after_attn:
+            output = layer(output)
+
+        return output, alpha
+    
 NLST_CENSORING_DIST = {
     "0": 0.9851928130104401,
     "1": 0.9748317321074379,

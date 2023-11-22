@@ -3,7 +3,7 @@ import sys
 from os.path import dirname, realpath
 
 sys.path.append(dirname(dirname(realpath(__file__))))
-from src.lightning import MLP, CNN, Resnet, CNN_3D, Resnet_2D_to_3D, Resnet_3D, RiskModel
+from src.lightning import MLP, CNN, Resnet, CNN_3D, Resnet_2D_to_3D, Resnet_3D, Attn_Guided_Resnet, RiskModel
 from src.dataset import PathMnist, NLST
 from lightning.pytorch.cli import LightningArgumentParser
 import lightning.pytorch as pl
@@ -16,6 +16,7 @@ NAME_TO_MODEL_CLASS = {
     "cnn_3d": CNN_3D,
     "resnet_2d_to_3d": Resnet_2D_to_3D,
     "resnet_3d": Resnet_3D,
+    "attn_guided_resnet": Attn_Guided_Resnet,
     "risk_model": RiskModel
 }
 
@@ -137,6 +138,11 @@ def main(args: argparse.Namespace):
         args[args.model_name]['optimizer'] = "AdamW"
         args[args.model_name]['pre_train'] = True
         exp_name = "3D ResNet" + "_pretrain=" + str(args[args.model_name]['pre_train']) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
+    elif args.model_name == "attn_guided_resnet":
+        args[args.model_name]['init_lr'] = 1e-4
+        args[args.model_name]['optimizer'] = "AdamW"
+        args[args.model_name]['pre_train'] = True
+        exp_name = "3D Attn_Guided_ResNet" + "_pretrain=" + str(args[args.model_name]['pre_train']) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
 
 
     if args.checkpoint_path is None:
@@ -145,8 +151,8 @@ def main(args: argparse.Namespace):
         model = NAME_TO_MODEL_CLASS[args.model_name].load_from_checkpoint(args.checkpoint_path)
 
     print("Initializing trainer")
-    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, offline=True)
-    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
+    # logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, offline=True)
+    logger = pl.loggers.WandbLogger(project=args.project_name, entity="cancer-busters", name=exp_name, mode="disabled")
 
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
