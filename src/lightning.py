@@ -357,7 +357,7 @@ class Resnet_3D(Classifer):
 
     def forward(self, x):
         # (BCHWD -> BCDHW) for conv_3d
-        x = torch.reshape(x, (x.shape[0], x.shape[1], x.shape[4], x.shape[2], x.shape[3]))
+        x = torch.permute(x, (0, 1, 4, 2, 3))
         
         x = self.backbone(x)
         for layer in self.fc_layers:

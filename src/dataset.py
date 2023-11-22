@@ -196,22 +196,18 @@ class NLST(pl.LightningDataModule):
 
         if self.class_balance:
             # collect idex for samples with 1-year cancer
-            cancer_weights = []
+            sample_weights = []
             for train_data in self.train:
                 if train_data['y_seq'][0] == 0:
-                    cancer_weights.append(0)
+                    sample_weights.append(0.015)
                 else:
-                    cancer_weights.append(1)
+                    sample_weights.append(0.985)
             
             # dumplicate the cancer samples so that we have as many cancers as non-cancers
-            cancer_idx = WeightedRandomSampler(cancer_weights, len(self.train)-sum(cancer_weights), replacement=True)
-            non_cancer_idx = WeightedRandomSampler([1-i for i in cancer_weights], len(self.train)-sum(cancer_weights), replacement=False)
-            
+            sample_idx = WeightedRandomSampler(sample_weights, len(self.train), replacement=True)
+
             # extract the samples
-            cancer_samples = [self.train[i] for i in cancer_idx]
-            non_cancer_samples = [self.train[i] for i in non_cancer_idx]
-            cancer_samples.extend(non_cancer_samples)
-            self.train = cancer_samples
+            self.train = [self.train[i] for i in sample_idx]
 
         self.train = NLST_Dataset(self.train, self.train_transform, self.normalize, self.img_size, self.num_images)
         self.val = NLST_Dataset(self.val, self.test_transform, self.normalize, self.img_size, self.num_images)
