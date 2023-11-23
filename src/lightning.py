@@ -410,8 +410,14 @@ class Attn_Guided_Resnet(Classifer):
         B, _, _, _, _ = mask.shape
         self.adpt_max_pool = nn.AdaptiveMaxPool3d(attn_map.shape[2:])
         mask = self.adpt_max_pool(mask)
-        attn_loss = -torch.log(torch.dot(mask.view(-1), attn_map.view(-1))+1e-8)/B
-        return attn_loss
+        
+        # a true false list indicating the batch index with annotation
+        batch_idx_with_annotation = torch.sum(mask, dim=(1,2,3,4)) > 0
+        assert(len(mask[batch_idx_with_annotation]) == sum(batch_idx_with_annotation))
+        attn_loss = -torch.log(torch.dot(mask[batch_idx_with_annotation].view(-1), attn_map[batch_idx_with_annotation].view(-1))+1e-8)
+        
+        eligible_batch_num = B - sum(batch_idx_with_annotation)
+        return attn_loss/eligible_batch_num
     
     def training_step(self, batch, batch_idx):
         x, y, mask = self.get_xy(batch)
@@ -429,9 +435,7 @@ class Attn_Guided_Resnet(Classifer):
 
         self.training_outputs.append({
             "y_hat": y_hat,
-            "y": y,
-            "attn_map": attn_map,
-            "mask": mask
+            "y": y
         })
         return loss
 
@@ -451,9 +455,7 @@ class Attn_Guided_Resnet(Classifer):
 
         self.validation_outputs.append({
             "y_hat": y_hat,
-            "y": y,
-            "attn_map": attn_map,
-            "mask": mask
+            "y": y
         })
         return loss
 
@@ -473,9 +475,7 @@ class Attn_Guided_Resnet(Classifer):
 
         self.test_outputs.append({
             "y_hat": y_hat,
-            "y": y,
-            "attn_map": attn_map,
-            "mask": mask
+            "y": y
         })
         return loss
 
