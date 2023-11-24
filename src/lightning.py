@@ -19,7 +19,7 @@ class Classifer(pl.LightningModule):
 
         # define loss
         if loss == "Cross Entropy":
-            self.loss = nn.CrossEntropyLoss()
+            self.loss = nn.CrossEntropyLoss(label_smoothing=0.1)
         if loss == "Binary Cross Entropy":
             self.loss = nn.BCEWithLogitsLoss()
 
@@ -142,7 +142,7 @@ class MLP(Classifer):
             if self.use_bn:
                 self.fc_layers.append(nn.BatchNorm1d(out_features))
 
-            self.fc_layers.append (nn.ReLU())
+            self.fc_layers.append(nn.ReLU())
             self.fc_layers.append(nn.Dropout(dropout_p))
             in_features = out_features
             
@@ -397,6 +397,7 @@ class Attn_Guided_Resnet(Classifer):
 
         # change the last fc layer to fit the number of classes
         self.layers_after_attn.append(nn.Linear(512, 128))
+        self.layers_after_attn.append(nn.BatchNorm1d(128))
         self.layers_after_attn.append(nn.ReLU())
         self.layers_after_attn.append(nn.Linear(128, self.num_classes))
 
@@ -407,17 +408,17 @@ class Attn_Guided_Resnet(Classifer):
     
     def attn_guided_loss(self, attn_map, mask):
         # downsample the mask to the embedding space of the attention map
-        B, _, _, _, _ = mask.shape
         self.adpt_max_pool = nn.AdaptiveMaxPool3d(attn_map.shape[2:])
         mask = self.adpt_max_pool(mask)
         
         # a true false list indicating the batch index with annotation
         batch_idx_with_annotation = torch.sum(mask, dim=(1,2,3,4)) > 0
         assert(len(mask[batch_idx_with_annotation]) == sum(batch_idx_with_annotation))
+        if sum(batch_idx_with_annotation) == 0:
+            return 0
         attn_loss = -torch.log(torch.dot(mask[batch_idx_with_annotation].view(-1), attn_map[batch_idx_with_annotation].view(-1))+1e-8)
         
-        eligible_batch_num = B - sum(batch_idx_with_annotation)
-        return attn_loss/eligible_batch_num
+        return attn_loss/sum(batch_idx_with_annotation)
     
     def training_step(self, batch, batch_idx):
         x, y, mask = self.get_xy(batch)
