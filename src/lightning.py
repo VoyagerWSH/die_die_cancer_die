@@ -506,23 +506,50 @@ NLST_CENSORING_DIST = {
     "4": 0.9523590830936284,
     "5": 0.9461840310101468,
 }
+
 class RiskModel(Classifer):
     def __init__(self, input_num_chan=1, num_classes=2, init_lr = 1e-3, max_followup=6, **kwargs):
         super().__init__(num_classes=num_classes, init_lr=init_lr)
         self.save_hyperparameters()
 
         self.hidden_dim = 512
-
         ## Maximum number of followups to predict (set to 6 for full risk prediction task)
         self.max_followup = max_followup
+        self.num_classes = num_classes
+        self.MLPs = nn.ModuleList()
+        self.backbone = torch.load('checkpoints/r3d_18.pt')
 
-        # TODO: Initalize components of your model here
-        raise NotImplementedError("Not implemented yet")
+        # self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
+        # At the strat of ResNet: average over the conv_3d filter channels to fit the input of channel 1
+        sd = self.backbone.state_dict()
+        conv_c1 = torch.mean(sd['stem.0.weight'], dim=1).unsqueeze(1)
+        self.backbone.stem[0] = nn.Conv3d(1, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False)
+        sd['stem.0.weight'] = conv_c1
+        self.backbone.load_state_dict(sd)
+        # change global avg pool to global max pool
+        self.backbone.avgpool = nn.AdaptiveMaxPool3d(1)
 
+        for _ in range(self.max_followup):
+            self.MLPs.append(nn.Sequential(
+                nn.ReLU(),
+                nn.Linear(self.hidden_dim, 256),
+                nn.ReLU(),
+                nn.Linear(256, 64),
+                nn.ReLU(),
+                nn.Linear(64, 1)))
 
 
     def forward(self, x):
-        raise NotImplementedError("Not implemented yet")
+        x = torch.permute(x, (0, 1, 4, 2, 3))
+        h = self.backbone(x)
+        y_prob = []
+        y_pred = []
+        for module in self.MLPs:
+            y_prob.append(module(h))
+        for i in range(self.max_followup):
+            y_pred.append(sum(y_prob[:i+1]))
+        return y_pred
+        
 
     def get_xy(self, batch):
         """
@@ -541,11 +568,9 @@ class RiskModel(Classifer):
         x, y_seq, y_mask, region_annotation_mask = self.get_xy(batch)
 
         # TODO: Get risk scores from your model
-        y_hat = None ## (B, T) shape tensor of risk scores.
+        y_hat = self.forward(x) ## (B, T) shape tensor of risk scores.
         # TODO: Compute your loss (with or without localization)
         loss = None
-
-        raise NotImplementedError("Not implemented yet")
         
         # TODO: Log any metrics you want to wandb
         metric_value = -1
@@ -562,6 +587,7 @@ class RiskModel(Classifer):
         })
 
         return loss
+    
     def training_step(self, batch, batch_idx):
         return self.step(batch, batch_idx, "train", self.training_outputs)
 
