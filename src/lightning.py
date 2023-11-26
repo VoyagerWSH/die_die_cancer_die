@@ -518,8 +518,8 @@ class RiskModel(Classifer):
         self.num_classes = num_classes
         self.MLPs = nn.ModuleList()
 
-        #self.backbone = torch.load('checkpoints/r3d_18.pt')
-        self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
+        self.backbone = torch.load('checkpoints/r3d_18.pt')
+        #self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
 
         # At the strat of ResNet: average over the conv_3d filter channels to fit the input of channel 1
         sd = self.backbone.state_dict()
@@ -562,7 +562,7 @@ class RiskModel(Classifer):
         for i in range(self.max_followup):
             y_pred.append(sum(y_prob[:i+1]))
         result = torch.cat(tuple(y_pred), 1)
-        return result
+        return result, alpha
     
     def attn_guided_loss(self, attn_map, mask):
         # downsample the mask to the embedding space of the attention map
@@ -595,14 +595,17 @@ class RiskModel(Classifer):
     def step(self, batch, batch_idx, stage, outputs):
         x, y_seq, y_mask, region_annotation_mask = self.get_xy(batch)
 
-        # TODO: Get risk scores from your model
-        y_hat = self.forward(x) ## (B, T) shape tensor of risk scores.
-        # TODO: Compute your loss (with or without localization)
-        loss = None
+        # (BCHWD -> BCDHW) for conv_3d
+        mask = torch.permute(region_annotation_mask, (0, 1, 4, 2, 3))
+
+        y_hat, attn_map = self.forward(x)
+        pred_loss = (torch.sum(y_seq*y_mask*torch.log(y_hat+1e-8)) + torch.sum((1-y_seq)*y_mask*torch.log(1-y_hat+1e-8))) / torch.sum(y_mask)
+        attn_loss = self.attn_guided_loss(attn_map, mask)
+        loss = pred_loss + attn_loss
         
         # TODO: Log any metrics you want to wandb
-        metric_value = -1
-        metric_name = "dummy_metric"
+        metric_value = loss
+        metric_name = "Loss"
         self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_epoch=True, on_step=True, sync_dist=True)
 
         # TODO: Store the predictions and labels for use at the end of the epoch for AUC and C-Index computation.
