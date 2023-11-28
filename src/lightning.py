@@ -601,7 +601,7 @@ class RiskModel(Classifer):
         y_hat, attn_map = self.forward(x)
         bceloss = nn.BCEWithLogitsLoss(reduction='none')
         loss = bceloss(y_hat,y_seq)
-        pred_loss = torch.sum(loss*y_mask)
+        pred_loss = torch.sum(loss*y_mask) / torch.sum(y_mask)
         attn_loss = self.attn_guided_loss(attn_map, mask)
         loss = pred_loss + attn_loss
         
