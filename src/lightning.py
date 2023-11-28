@@ -599,7 +599,9 @@ class RiskModel(Classifer):
         mask = torch.permute(region_annotation_mask, (0, 1, 4, 2, 3))
 
         y_hat, attn_map = self.forward(x)
-        pred_loss = (torch.sum(y_seq*y_mask*torch.log(y_hat+1e-8)) + torch.sum((1-y_seq)*y_mask*torch.log(1-y_hat+1e-8))) / torch.sum(y_mask)
+        bceloss = nn.BCEWithLogitsLoss(reduction='none')
+        loss = bceloss(y_hat,y_seq)
+        pred_loss = torch.sum(loss*y_mask)
         attn_loss = self.attn_guided_loss(attn_map, mask)
         loss = pred_loss + attn_loss
         
