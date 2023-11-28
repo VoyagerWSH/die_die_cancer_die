@@ -562,6 +562,7 @@ class RiskModel(Classifer):
         for i in range(self.max_followup):
             y_pred.append(sum(y_prob[:i+1]))
         result = torch.cat(tuple(y_pred), 1)
+        result = result.double()
         return result, alpha
     
     def attn_guided_loss(self, attn_map, mask):
