@@ -553,17 +553,13 @@ class RiskModel(Classifer):
         assert(C_ == 1)
         alpha = F.softmax(alpha.view(B,-1), dim=1).view(B, C_, D_, H_, W_)
         output = (alpha*h).sum(dim=(2,3,4))
-
         base = self.BaseMLP(output)
-        base = base.double()
         logits = self.MLP(output)
-        logits = logits.double()
-        result = base + logits
-        y_pred = []
+        result = []
         for i in range(self.max_followup):
-            y_pred.append(torch.sum(result[:,:i+1], dim = 1).reshape(-1,1))
-        acc_result = torch.cat(tuple(y_pred), 1)
-        return acc_result, alpha
+            result.append(torch.sum(logits[:,:i+1], dim = 1).reshape(-1,1) + base)
+        result = torch.cat(tuple(result), 1)
+        return result, alpha
     
     def attn_guided_loss(self, attn_map, mask):
         # downsample the mask to the embedding space of the attention map
@@ -648,7 +644,7 @@ class RiskModel(Classifer):
         time_at_event = torch.cat([o["time_at_event"] for o in outputs])
 
         if y.sum() > 0 and self.max_followup == 6:
-            c_index = concordance_index(time_at_event.cpu().numpy(), y_hat.detach().cpu().numpy(), y.cpu().numpy(), NLST_CENSORING_DIST)
+            c_index = concordance_index(time_at_event.cpu().numpy(), y_hat.double().detach().cpu().numpy(), y.cpu().numpy(), NLST_CENSORING_DIST)
         else:
             c_index = 0
         self.log("{}_c_index".format(stage), c_index, sync_dist=True, prog_bar=True)
