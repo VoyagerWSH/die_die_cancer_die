@@ -516,7 +516,6 @@ class RiskModel(Classifer):
         ## Maximum number of followups to predict (set to 6 for full risk prediction task)
         self.max_followup = max_followup
         self.num_classes = num_classes
-        self.MLPs = nn.ModuleList()
 
         self.backbone = torch.load('checkpoints/r3d_18.pt')
         #self.backbone = torchvision.models.video.r3d_18(weights="DEFAULT")
@@ -536,15 +535,14 @@ class RiskModel(Classifer):
         # Used to generate alpha
         self.attn_pool = nn.Conv3d(512, 1, kernel_size=1, stride=1)
 
-        for _ in range(self.max_followup):
-            self.MLPs.append(nn.Sequential(
-                nn.ReLU(),
-                nn.Linear(self.hidden_dim, 256),
-                nn.ReLU(),
-                nn.Linear(256, 64),
-                nn.ReLU(),
-                nn.Linear(64, 1)))
+        self.BaseMLP = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, 1))
 
+        self.MLP = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.max_followup),
+            nn.ReLU())
 
     def forward(self, x):
         x = torch.permute(x, (0, 1, 4, 2, 3))
@@ -555,15 +553,17 @@ class RiskModel(Classifer):
         assert(C_ == 1)
         alpha = F.softmax(alpha.view(B,-1), dim=1).view(B, C_, D_, H_, W_)
         output = (alpha*h).sum(dim=(2,3,4))
-        y_prob = []
+
+        base = self.BaseMLP(output)
+        base = base.double()
+        logits = self.MLP(output)
+        logits = logits.double()
+        result = base + logits
         y_pred = []
-        for module in self.MLPs:
-            y_prob.append(module(output))
         for i in range(self.max_followup):
-            y_pred.append(sum(y_prob[:i+1]))
-        result = torch.cat(tuple(y_pred), 1)
-        result = result.double()
-        return result, alpha
+            y_pred.append(torch.sum(result[:,:i+1], dim = 1).reshape(-1,1))
+        acc_result = torch.cat(tuple(y_pred), 1)
+        return acc_result, alpha
     
     def attn_guided_loss(self, attn_map, mask):
         # downsample the mask to the embedding space of the attention map
