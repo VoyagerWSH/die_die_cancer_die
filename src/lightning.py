@@ -538,10 +538,12 @@ class RiskModel(Classifer):
         self.BaseMLP = nn.Sequential(
             nn.ReLU(),
             nn.Linear(self.hidden_dim, 1))
-
         self.MLP = nn.Sequential(
             nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.max_followup),
+            nn.Linear(self.hidden_dim, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Linear(128, self.max_followup),
             nn.ReLU())
 
     def forward(self, x):
