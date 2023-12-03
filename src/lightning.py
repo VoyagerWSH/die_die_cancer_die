@@ -608,9 +608,9 @@ class RiskModel(Classifer):
         metric_value = loss
         metric_name = "Loss"
         if stage == "train":
-            self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_step=True, sync_dist=True)
+            self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_step=True, on_epoch=False, sync_dist=True)
         else:
-            self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_epoch=True, sync_dist=True)
+            self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
 
         # TODO: Store the predictions and labels for use at the end of the epoch for AUC and C-Index computation.
         outputs.append({
