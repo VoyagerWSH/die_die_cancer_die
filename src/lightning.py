@@ -607,7 +607,10 @@ class RiskModel(Classifer):
         # TODO: Log any metrics you want to wandb
         metric_value = loss
         metric_name = "Loss"
-        self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_epoch=True, on_step=True, sync_dist=True)
+        if stage == "train":
+            self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_step=True, sync_dist=True)
+        else:
+            self.log('{}_{}'.format(stage, metric_name), metric_value, prog_bar=True, on_epoch=True, sync_dist=True)
 
         # TODO: Store the predictions and labels for use at the end of the epoch for AUC and C-Index computation.
         outputs.append({
@@ -622,9 +625,10 @@ class RiskModel(Classifer):
     
     def training_step(self, batch, batch_idx):
         return self.step(batch, batch_idx, "train", self.training_outputs)
-
+    
     def validation_step(self, batch, batch_idx):
         return self.step(batch, batch_idx, "val", self.validation_outputs)
+    
     def test_step(self, batch, batch_idx):
         return self.step(batch, batch_idx, "test", self.test_outputs)
 
