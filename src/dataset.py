@@ -84,7 +84,7 @@ class NLST(pl.LightningDataModule):
             self,
             use_data_augmentation=True,
             batch_size=6,
-            num_workers=6,
+            num_workers=8,
             nlst_metadata_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/full_nlst_google.json",
             valid_exam_path="/wynton/protected/project/cph/cornerstone/nlst-metadata/valid_exams.p",
             nlst_dir="/scratch/datasets/nlst/preprocessed",
@@ -299,6 +299,7 @@ class NLST_Dataset(torch.utils.data.Dataset):
         ## Normalize volume to have 0 pixel mean and unit variance
         sample['x'] = self.normalize(sample['x'])
 
+        sample['lung_rads'] = self.dataset[idx]['lung_rads']
         ## Remove potentially none items for batch collation
         del sample['bounding_boxes']
 

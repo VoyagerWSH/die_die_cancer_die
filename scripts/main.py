@@ -144,7 +144,7 @@ def main(args: argparse.Namespace):
         args[args.model_name]['pre_train'] = True
         exp_name = "3D Attn_Guided_ResNet" + "_pretrain=" + str(args[args.model_name]['pre_train']) + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
     elif args.model_name == "risk_model":
-        args[args.model_name]['init_lr'] = 1e-4
+        args[args.model_name]['init_lr'] = 5e-4
         args[args.model_name]['optimizer'] = "AdamW"
         exp_name = "Risk Model" + "_LR=" + str(args[args.model_name]['init_lr']) + "_opti=" + args[args.model_name]['optimizer']
 
@@ -162,7 +162,7 @@ def main(args: argparse.Namespace):
     args.trainer.accelerator = 'auto' ## “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps”, or “auto”
     args.trainer.logger = logger
     args.trainer.precision = "bf16-mixed" ## This mixed precision training is highly recommended
-    args.trainer.max_epochs = 10
+    args.trainer.max_epochs = 15
     args.trainer.num_nodes = 1 ## Number of GPU nodes for distributed training
 
     args.trainer.callbacks = [
