@@ -12,7 +12,7 @@ def main():
     lung_rads = []
     for x in test_dataloader:
         lung_rads.extend(x["lung_rads"].tolist())
-        y.extend(x["y"].tolist())
+        y.extend(x['y_seq'][0].tolist())
 
     # Simulating Clinical Utility
     # Rads     Not Rads
