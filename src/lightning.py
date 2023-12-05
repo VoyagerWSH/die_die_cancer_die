@@ -19,7 +19,7 @@ class Classifer(pl.LightningModule):
 
         # define loss
         if loss == "Cross Entropy":
-            self.loss = nn.CrossEntropyLoss(label_smoothing=0.1)
+            self.loss = nn.CrossEntropyLoss()
         if loss == "Binary Cross Entropy":
             self.loss = nn.BCEWithLogitsLoss()
 

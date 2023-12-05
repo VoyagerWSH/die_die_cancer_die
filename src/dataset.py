@@ -136,9 +136,8 @@ class NLST(pl.LightningDataModule):
             padding,
             resize,
             tio.RandomFlip(),
-            tio.RandomAffine(degrees=90),
-            tio.RandomNoise(),
-            tio.RandomSwap()
+            tio.RandomAffine(),
+            tio.RandomNoise()
         ])
             
         self.test_transform = tio.transforms.Compose([
