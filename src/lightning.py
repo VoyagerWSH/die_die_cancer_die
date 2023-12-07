@@ -6,7 +6,6 @@ import torchmetrics
 import torchvision
 from src.cindex import concordance_index
 from math import floor
-import random
 
 from torchvision.models import resnet18
 
@@ -433,6 +432,8 @@ class Attn_Guided_Resnet(Classifer):
 
         self.log('train_acc', self.accuracy(y_hat, y), prog_bar=True)
         self.log('train_loss', loss, prog_bar=True)
+        self.log('train_pred_loss', pred_loss, prog_bar=True)
+        self.log('train_attn_loss', attn_loss, prog_bar=True)
 
         self.training_outputs.append({
             "y_hat": y_hat,
@@ -453,6 +454,8 @@ class Attn_Guided_Resnet(Classifer):
 
         self.log('val_loss', loss, sync_dist=True, prog_bar=True)
         self.log("val_acc", self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
+        self.log('val_pred_loss', pred_loss, prog_bar=True)
+        self.log('val_attn_loss', attn_loss, prog_bar=True)
 
         self.validation_outputs.append({
             "y_hat": y_hat,
@@ -473,6 +476,8 @@ class Attn_Guided_Resnet(Classifer):
 
         self.log('test_loss', loss, sync_dist=True, prog_bar=True)
         self.log('test_acc', self.accuracy(y_hat, y), sync_dist=True, prog_bar=True)
+        self.log('val_pred_loss', pred_loss, prog_bar=True)
+        self.log('val_attn_loss', attn_loss, prog_bar=True)
 
         self.test_outputs.append({
             "y_hat": y_hat,
