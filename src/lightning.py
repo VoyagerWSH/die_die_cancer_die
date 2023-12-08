@@ -541,7 +541,10 @@ class RiskModel(Classifer):
         self.attn_pool = nn.Conv3d(512, 1, kernel_size=1, stride=1)
 
         self.BaseMLP = nn.Sequential(
-            nn.Linear(self.hidden_dim, 1))
+            nn.Linear(self.hidden_dim, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Linear(128, 1))
         self.MLP = nn.Sequential(
             nn.Linear(self.hidden_dim, 128),
             nn.BatchNorm1d(128),
